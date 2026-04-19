@@ -84,20 +84,24 @@ function renderExhibit1(): string {
         <div class="field-group">
           <label class="field-label" for="e1-algo">Current Algorithm</label>
           <select id="e1-algo">${algoOptions}</select>
-          <div class="algo-status" id="e1-algo-status"></div>
+          <div class="algo-status" id="e1-algo-status" role="status" aria-live="polite"></div>
         </div>
         <div class="field-group">
-          <label class="field-label" for="e1-x">Data Lifetime X = <span id="e1-x-label"></span></label>
+          <label class="field-label" for="e1-x">Data Lifetime X = <span id="e1-x-label" aria-hidden="true"></span></label>
           <div class="range-row">
-            <input type="range" id="e1-x" min="0" max="100" step="1" value="30" />
-            <span class="range-value" id="e1-x-val">30 yrs</span>
+            <input type="range" id="e1-x" min="0" max="100" step="1" value="30"
+              aria-valuemin="0" aria-valuemax="100" aria-valuenow="30" aria-valuetext="30 years"
+              aria-describedby="e1-x-val" />
+            <span class="range-value" id="e1-x-val" aria-live="polite">30 yrs</span>
           </div>
         </div>
         <div class="field-group">
-          <label class="field-label" for="e1-y">Migration Time Y = <span id="e1-y-label"></span></label>
+          <label class="field-label" for="e1-y">Migration Time Y = <span id="e1-y-label" aria-hidden="true"></span></label>
           <div class="range-row">
-            <input type="range" id="e1-y" min="1" max="20" step="1" value="5" />
-            <span class="range-value" id="e1-y-val">5 yrs</span>
+            <input type="range" id="e1-y" min="1" max="20" step="1" value="5"
+              aria-valuemin="1" aria-valuemax="20" aria-valuenow="5" aria-valuetext="5 years"
+              aria-describedby="e1-y-val" />
+            <span class="range-value" id="e1-y-val" aria-live="polite">5 yrs</span>
           </div>
         </div>
         <div class="field-group">
@@ -106,7 +110,7 @@ function renderExhibit1(): string {
           <span class="field-sublabel" id="e1-scenario-hint"></span>
         </div>
       </div>
-      <div class="mosca-result" id="e1-result">
+      <div class="mosca-result" id="e1-result" aria-live="polite" aria-label="Mosca inequality risk result">
         <!-- filled dynamically -->
       </div>
     </div>
@@ -127,9 +131,13 @@ function initExhibit1(): void {
     const scenario = CRQC_SCENARIOS.find(s => s.label === scenSel.value) ?? CRQC_SCENARIOS[1];
     const algoName = algoSel.value;
 
-    // Update value displays
+    // Update value displays + ARIA attributes
     (document.getElementById('e1-x-val') as HTMLElement).textContent = `${xVal} yrs`;
     (document.getElementById('e1-y-val') as HTMLElement).textContent = `${yVal} yrs`;
+    xRange.setAttribute('aria-valuenow', String(xVal));
+    xRange.setAttribute('aria-valuetext', `${xVal} years`);
+    yRange.setAttribute('aria-valuenow', String(yVal));
+    yRange.setAttribute('aria-valuetext', `${yVal} years`);
 
     // Update data type hint
     const dt = DATA_TYPES.find(d => d.name === dtSel.value);
@@ -256,7 +264,7 @@ function renderExhibit2(): string {
         <select id="e2-scenario">${scenarioOptions}</select>
       </div>
     </div>
-    <div id="e2-content"></div>
+    <div id="e2-content" aria-live="polite"></div>
   </div>
 </div>`;
 }
@@ -316,14 +324,16 @@ function initExhibit2(): void {
         </div>
       </div>
 
+      <div class="table-scroll" role="region" aria-label="Asset risk table">
       <table class="asset-table">
         <thead><tr>
-          <th>Asset</th><th>Algorithm</th><th>X (Lifetime)</th><th>Y (Migration)</th><th>Risk</th><th>Action</th>
+          <th scope="col">Asset</th><th scope="col">Algorithm</th><th scope="col">X (Lifetime)</th><th scope="col">Y (Migration)</th><th scope="col">Risk</th><th scope="col">Action</th>
         </tr></thead>
         <tbody>${tableRows}</tbody>
       </table>
+      </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem">
+      <div class="two-col-grid">
         <div>
           <div class="field-label" style="margin-bottom:0.5rem">Priority Migration Order</div>
           ${priorityList}
@@ -334,7 +344,7 @@ function initExhibit2(): void {
             ${esc(aggregateRisk.worstAsset)}
           </div>
         </div>
-      </div>
+      </div><!-- /.two-col-grid -->
 
       <div class="top-recommendation">
         <strong style="font-family:var(--font-mono);font-size:0.75rem;color:var(--color-crqc)">TOP RECOMMENDATION</strong><br>
@@ -373,16 +383,16 @@ function renderExhibit3(): string {
         <label class="field-label" for="e3-algo">Algorithm</label>
         <select id="e3-algo">${algoOptions}</select>
       </div>
-      <div class="field-group" style="flex:0">
-        <label class="field-label">Show Scenarios</label>
+      <fieldset class="field-group" style="flex:0;border:none;padding:0;min-width:0">
+        <legend class="field-label">Show Scenarios</legend>
         <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.3rem">
           ${CRQC_SCENARIOS.map(s => `
-            <label style="display:flex;align-items:center;gap:0.3rem;font-size:0.78rem;cursor:pointer;color:${CURVE_COLORS[s.label]}">
+            <label style="display:flex;align-items:center;gap:0.4rem;font-size:0.78rem;cursor:pointer;color:${CURVE_COLORS[s.label]};min-height:44px">
               <input type="checkbox" id="e3-chk-${s.label}" checked style="accent-color:${CURVE_COLORS[s.label]}">
               ${s.label.charAt(0).toUpperCase() + s.label.slice(1)}
             </label>`).join('')}
         </div>
-      </div>
+      </fieldset>
     </div>
     <div class="svg-chart-wrap" id="e3-chart"></div>
     <div class="chart-legend" id="e3-legend"></div>
@@ -467,8 +477,12 @@ function initExhibit3(): void {
     const titleColor = algInfo?.broken ? 'var(--color-danger)' : algInfo?.longTermSafe ? 'var(--color-safe)' : 'var(--color-amber)';
     svgContent += `<text x="${padL + chartW / 2}" y="${svgH - 4}" text-anchor="middle" font-size="12" fill="${titleColor}">${algoName} — probability that harvested ciphertext becomes decryptable</text>`;
 
+    const algStatus = ALGORITHM_SECURITY.find(a => a.algorithm === algoName);
+    const algStatusText = algStatus?.broken ? 'broken (Shor-vulnerable)' : algStatus?.longTermSafe ? 'quantum-safe' : 'partially affected';
     const chartEl = document.getElementById('e3-chart') as HTMLElement;
-    chartEl.innerHTML = `<svg viewBox="0 0 ${svgW} ${svgH}" style="width:100%;display:block" role="img" aria-label="Exposure probability curve for ${esc(algoName)}">${svgContent}</svg>`;
+    chartEl.innerHTML = `<svg viewBox="0 0 ${svgW} ${svgH}" style="width:100%;display:block" role="img" aria-labelledby="e3-chart-title">
+      <title id="e3-chart-title">Exposure probability curve for ${esc(algoName)} (${esc(algStatusText)}), showing probability of harvested ciphertext becoming decryptable from ${CURRENT_YEAR} to ${CURRENT_YEAR + horizonYears} across 4 CRQC scenarios</title>
+      ${svgContent}</svg>`;
 
     const legendEl = document.getElementById('e3-legend') as HTMLElement;
     legendEl.innerHTML = legendItems.join('');
@@ -509,7 +523,7 @@ function renderExhibit4(): string {
         <select id="e4-scenario">${scenarioOptions}</select>
       </div>
     </div>
-    <div id="e4-content"></div>
+    <div id="e4-content" aria-live="polite"></div>
   </div>
 </div>`;
 }
@@ -525,20 +539,23 @@ function initExhibit4(): void {
 
     const delays = [0, 1, 2, 5, 10];
 
-    const baseline = whatIfMigrationDelay(profile, scenario, 0);
-
     const rows = delays.map(d => {
       const result = whatIfMigrationDelay(profile, scenario, d);
       const startYear = CURRENT_YEAR + d;
       const completeYear = CURRENT_YEAR + d + profile.typicalMigrationYears;
 
-      let exposedClass = 'delay-cell-safe';
-      if (result.exposedDataTB > baseline.exposedDataTB * 0.9) exposedClass = 'delay-cell-critical';
-      else if (result.exposedDataTB > baseline.exposedDataTB * 0.5) exposedClass = 'delay-cell-danger';
-      else if (result.exposedDataTB > 0) exposedClass = 'delay-cell-amber';
+      const totalTB = profile.assets.reduce((s, a) => s + a.dataSizeTB, 0);
 
-      const pctExposed = baseline.exposedDataTB + result.exposedDataTB > 0
-        ? ((result.exposedDataTB / profile.assets.reduce((s, a) => s + a.dataSizeTB, 0)) * 100).toFixed(0)
+      let exposedClass = 'delay-cell-safe';
+      if (result.exposedDataTB > 0) {
+        const pct = result.exposedDataTB / totalTB;
+        if (pct >= 0.6) exposedClass = 'delay-cell-critical';
+        else if (pct >= 0.3) exposedClass = 'delay-cell-danger';
+        else exposedClass = 'delay-cell-amber';
+      }
+
+      const pctExposed = totalTB > 0
+        ? ((result.exposedDataTB / totalTB) * 100).toFixed(0)
         : '0';
 
       const crqcYear = CURRENT_YEAR + scenario.yearsFromNow;
@@ -556,17 +573,20 @@ function initExhibit4(): void {
 
     const contentEl = document.getElementById('e4-content') as HTMLElement;
     contentEl.innerHTML = `
+      <div class="table-scroll" role="region" aria-label="Cost of delay table">
       <table class="delay-table">
         <thead><tr>
-          <th>Migration Start</th>
-          <th>Completes By</th>
-          <th>Exposed Assets</th>
-          <th>Exposed Data</th>
-          <th>% Exposed</th>
-          <th>vs CRQC (~${CURRENT_YEAR + scenario.yearsFromNow})</th>
+          <th scope="col">Migration Start</th>
+          <th scope="col">Completes By</th>
+          <th scope="col">Exposed Assets</th>
+          <th scope="col">Exposed Data</th>
+          <th scope="col">% Exposed</th>
+          <th scope="col">vs CRQC (~${CURRENT_YEAR + scenario.yearsFromNow})</th>
         </tr></thead>
         <tbody>${rows.join('')}</tbody>
       </table>
+      </div>`;
+      contentEl.innerHTML += `
       <div class="delay-insight">
         <strong>Key Insight:</strong> Every year of delay increases the exposure window.
         Data encrypted <em>today</em> under classical algorithms may already be harvested
@@ -613,12 +633,13 @@ function renderExhibit5(): string {
       Example: PrayerWarriors — Ministry App Analysis
     </h4>
 
+    <div class="table-scroll" role="region" aria-label="PrayerWarriors data asset recommendations">
     <table class="personal-table">
       <thead><tr>
-        <th>Data Asset</th>
-        <th>Sensitivity Lifetime</th>
-        <th>Recommended Algorithm(s)</th>
-        <th>Notes</th>
+        <th scope="col">Data Asset</th>
+        <th scope="col">Sensitivity Lifetime</th>
+        <th scope="col">Recommended Algorithm(s)</th>
+        <th scope="col">Notes</th>
       </tr></thead>
       <tbody>
         <tr>
@@ -671,6 +692,7 @@ function renderExhibit5(): string {
         </tr>
       </tbody>
     </table>
+    </div><!-- /.table-scroll -->
 
     <div style="margin-bottom:1.5rem">
       <div class="field-label" style="margin-bottom:0.75rem">Mosca Check: PrayerWarriors Prayer Requests</div>
@@ -702,7 +724,7 @@ function initExhibit5(): void {
   const safe       = assessRisk('Prayer Requests (ML-KEM-768)', 'ML-KEM-768', 50, 3, CRQC_SCENARIOS[1]);
 
   resultEl.innerHTML = `
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+    <div class="two-col-grid" style="gap:1rem;margin-bottom:0">
       <div class="result-verdict ${vulnerable.riskLevel}">
         <div class="verdict-level" style="font-size:0.95rem">${riskIcon(vulnerable.riskLevel)} If using RSA-2048</div>
         <div class="verdict-detail">X=50y + Y=3y = 53y &gt; Z=${vulnerable.moscaInequality.Z}y<br>

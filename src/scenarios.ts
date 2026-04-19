@@ -294,12 +294,15 @@ export function whatIfMigrationDelay(
     assessRisk(a.name, a.algorithm, a.X, a.Y, scenario),
   );
 
-  const exposedAssets = assessments.filter((a) => a.moscaInequality.exposed).length;
+  const exposedAssets = assessments.filter((a) => a.moscaInequality.exposed && a.riskLevel !== 'none').length;
   const exposedDataTB = delayedAssets
-    .filter((_, i) => assessments[i].moscaInequality.exposed)
+    .filter((_, i) => assessments[i].moscaInequality.exposed && assessments[i].riskLevel !== 'none')
     .reduce((sum, a) => sum + a.dataSizeTB, 0);
   const totalMigrationTimeAffected = delayedAssets.reduce(
-    (sum, a) => (assessments.find((r) => r.assetName === a.name)?.moscaInequality.exposed ? sum + a.Y : sum),
+    (sum, a) => {
+      const r = assessments.find((ar) => ar.assetName === a.name);
+      return r?.moscaInequality.exposed && r.riskLevel !== 'none' ? sum + a.Y : sum;
+    },
     0,
   );
 

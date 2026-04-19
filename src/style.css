@@ -324,3 +324,78 @@ input[type='range'] { flex: 1; accent-color: var(--color-today); cursor: pointer
 .app-footer a { color: var(--color-text-muted); text-decoration: underline; }
 
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+/* ── Focus-visible: keyboard-nav ring for all interactive elements ─────────── */
+:focus-visible {
+  outline: 2px solid var(--color-today);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+/* Ensure existing form elements also use the unified style */
+select:focus-visible, input:focus-visible { outline: 2px solid var(--color-today); outline-offset: 2px; }
+/* Remove :focus fallback so mouse-clicks don't show the ring */
+select:focus:not(:focus-visible), input:focus:not(:focus-visible) { outline: none; }
+
+/* ── Touch targets: minimum 44 × 44 px per WCAG 2.5.5 ──────────────────────── */
+.theme-toggle {
+  min-height: 44px;
+  padding: 0.5rem 0.875rem;
+}
+select {
+  min-height: 44px;
+}
+input[type='range'] {
+  min-height: 44px;
+  cursor: pointer;
+}
+.related-link {
+  padding: 0.55rem 0.875rem;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* ── Table scroll wrappers for mobile overflow ──────────────────────────────── */
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: var(--radius-sm);
+}
+.table-scroll:focus-within { outline: 2px solid var(--color-today); outline-offset: 2px; }
+
+/* ── Responsive two-column grid (collapses to 1-col at 640 px) ──────────────── */
+.two-col-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+/* ── Mobile breakpoints ─────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .app-header       { padding: 0.75rem 1rem; gap: 0.5rem; }
+  .app-header h1    { font-size: 0.8rem; }
+  .app-main         { padding: 0.875rem; gap: 1.5rem; }
+  .mosca-banner     { padding: 1rem; }
+  .exhibit-header   { padding: 0.875rem 1rem; flex-wrap: wrap; gap: 0.5rem; }
+  .exhibit-header h3 { font-size: 0.9rem; }
+  .exhibit-body     { padding: 1rem; }
+  .mosca-formula    { font-size: 1rem; flex-wrap: wrap; gap: 0.15rem; }
+  .mosca-legend     { gap: 0.75rem; }
+  .calc-grid        { grid-template-columns: 1fr; }
+  .org-controls,
+  .curve-controls,
+  .delay-controls   { flex-direction: column; }
+  .aggregate-panel  { grid-template-columns: repeat(2, 1fr); }
+  .agg-stat .stat-value { font-size: 1.2rem; }
+  .two-col-grid     { grid-template-columns: 1fr; }
+  .app-footer       { padding: 1rem; }
+  .asset-table, .delay-table, .personal-table { font-size: 0.78rem; }
+  .asset-table th, .delay-table th, .personal-table th { font-size: 0.65rem; }
+}
