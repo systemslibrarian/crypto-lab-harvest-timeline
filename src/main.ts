@@ -19,6 +19,27 @@ function esc(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+/**
+ * Build <optgroup>-grouped <option> HTML for the algorithm catalog, split into
+ * Broken (Shor-vulnerable) / Partial (Grover-affected) / Quantum-safe (NIST PQC).
+ * The whole point of the tool is the contrast between these buckets — make it
+ * visible in the picker.
+ */
+function buildAlgoOptgroups(): string {
+  const broken  = ALGORITHM_SECURITY.filter(a => a.broken);
+  const partial = ALGORITHM_SECURITY.filter(a => !a.broken && !a.longTermSafe);
+  const safe    = ALGORITHM_SECURITY.filter(a => !a.broken && a.longTermSafe);
+
+  const opts = (algs: typeof ALGORITHM_SECURITY): string =>
+    algs.map(a => `<option value="${esc(a.algorithm)}">${esc(a.algorithm)}</option>`).join('');
+
+  return [
+    broken.length  ? `<optgroup label="⚠ Broken by Shor (urgent migration)">${opts(broken)}</optgroup>`  : '',
+    partial.length ? `<optgroup label="~ Partially affected by Grover">${opts(partial)}</optgroup>`      : '',
+    safe.length    ? `<optgroup label="✓ Quantum-safe (NIST PQC)">${opts(safe)}</optgroup>`              : '',
+  ].join('');
+}
+
 function riskIcon(level: string): string {
   const icons: Record<string, string> = {
     critical: '🔴', high: '🟠', medium: '🟡', low: '🟢', none: '✅',
@@ -34,6 +55,39 @@ function actionLabel(action: string): string {
     monitor:             'Monitor',
   };
   return labels[action] ?? action;
+}
+
+// ─── exhibit nav (sticky TOC) ─────────────────────────────────────────────────
+
+function initExhibitNav(): void {
+  const nav = document.getElementById('exhibit-nav');
+  if (!nav) return;
+  const links = Array.from(nav.querySelectorAll<HTMLAnchorElement>('a[data-target]'));
+  const sections = links
+    .map(l => document.getElementById(l.dataset.target ?? ''))
+    .filter((el): el is HTMLElement => el !== null);
+
+  if (sections.length === 0 || typeof IntersectionObserver === 'undefined') return;
+
+  function setActive(id: string): void {
+    for (const l of links) {
+      l.classList.toggle('active', l.dataset.target === id);
+    }
+  }
+
+  // Track the section closest to the top of the viewport
+  const observer = new IntersectionObserver(
+    (entries) => {
+      const visible = entries
+        .filter(e => e.isIntersecting)
+        .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+      if (visible[0]) setActive(visible[0].target.id);
+    },
+    { rootMargin: '-120px 0px -55% 0px', threshold: 0 },
+  );
+
+  sections.forEach(s => observer.observe(s));
+  setActive(sections[0].id);
 }
 
 // ─── theme toggle ─────────────────────────────────────────────────────────────
@@ -54,14 +108,31 @@ function initTheme(): void {
 
 // ─── Exhibit 1: Personal Risk Calculator ─────────────────────────────────────
 
+interface QuickScenario {
+  id: string;
+  label: string;
+  hint: string;
+  dt: string;
+  algo: string;
+  x: number;
+  y: number;
+  z: 'aggressive' | 'median' | 'pessimistic' | 'ultra-pessimistic';
+}
+
+const QUICK_SCENARIOS: QuickScenario[] = [
+  { id: 'medical-rsa',    label: 'Medical · RSA-2048',    hint: 'EHR encrypted with legacy RSA', dt: 'Medical records',        algo: 'RSA-2048',          x: 30, y: 5,  z: 'median' },
+  { id: 'genomic-rsa',    label: 'Genomic · RSA-4096',    hint: '100-year sensitivity horizon',  dt: 'Genetic/genomic data',   algo: 'RSA-4096',          x: 80, y: 8,  z: 'median' },
+  { id: 'classified-ec',  label: 'Classified · ECDSA',    hint: 'CNSA 2.0-bound government',     dt: 'Classified government',  algo: 'ECDSA-P384 + AES-256', x: 50, y: 15, z: 'median' },
+  { id: 'finance-ecdh',   label: 'Financial · ECDH',      hint: 'Banking TLS at rest',           dt: 'Financial transactions', algo: 'ECDH + AES-256',    x: 10, y: 10, z: 'median' },
+  { id: 'pii-mlkem',      label: 'PII · ML-KEM-768',      hint: 'Quantum-safe baseline',         dt: 'Personal data (PII)',    algo: 'ML-KEM-768',        x: 10, y: 2,  z: 'median' },
+];
+
 function renderExhibit1(): string {
   const dataTypeOptions = DATA_TYPES.map(
     (dt) => `<option value="${esc(dt.name)}">${esc(dt.name)} (${dt.typicalLifetimeMin}–${dt.typicalLifetimeMax}y)</option>`
   ).join('');
 
-  const algoOptions = ALGORITHM_SECURITY.map(
-    (a) => `<option value="${esc(a.algorithm)}">${esc(a.algorithm)}</option>`
-  ).join('');
+  const algoOptions = buildAlgoOptgroups();
 
   const scenarioOptions = CRQC_SCENARIOS.map(
     (s) => `<option value="${esc(s.label)}">${esc(s.label.charAt(0).toUpperCase() + s.label.slice(1))} (~${CURRENT_YEAR + s.yearsFromNow})</option>`
@@ -74,6 +145,13 @@ function renderExhibit1(): string {
     <h3>Personal Risk Calculator — Mosca Inequality for Your Data</h3>
   </div>
   <div class="exhibit-body">
+    <div class="quick-scenarios" role="group" aria-label="Quick scenarios">
+      <span class="quick-label">Try:</span>
+      ${QUICK_SCENARIOS.map(s => `
+        <button type="button" class="chip" data-preset="${esc(s.id)}" title="${esc(s.hint)}">
+          ${esc(s.label)}
+        </button>`).join('')}
+    </div>
     <div class="calc-grid">
       <div class="calc-inputs">
         <div class="field-group">
@@ -114,6 +192,14 @@ function renderExhibit1(): string {
         <!-- filled dynamically -->
       </div>
     </div>
+    <div class="exhibit-toolbar">
+      <button class="toolbar-btn" id="e1-share" type="button" aria-label="Copy a shareable URL for this scenario">
+        <span aria-hidden="true">🔗</span> <span class="btn-label">Copy share link</span>
+      </button>
+      <button class="toolbar-btn" id="e1-reset" type="button" aria-label="Reset calculator to defaults">
+        <span aria-hidden="true">↺</span> Reset
+      </button>
+    </div>
   </div>
 </div>`;
 }
@@ -124,6 +210,37 @@ function initExhibit1(): void {
   const xRange  = document.getElementById('e1-x')       as HTMLInputElement;
   const yRange  = document.getElementById('e1-y')       as HTMLInputElement;
   const scenSel = document.getElementById('e1-scenario') as HTMLSelectElement;
+  const shareBtn = document.getElementById('e1-share')  as HTMLButtonElement;
+  const resetBtn = document.getElementById('e1-reset')  as HTMLButtonElement;
+
+  // ── URL state: dt, algo, x, y, z ─────────────────────────────────────────
+  const params = new URLSearchParams(window.location.search);
+  const findOption = (sel: HTMLSelectElement, value: string | null): boolean => {
+    if (!value) return false;
+    const match = Array.from(sel.options).find(
+      (o) => o.value.toLowerCase() === value.toLowerCase(),
+    );
+    if (match) { sel.value = match.value; return true; }
+    return false;
+  };
+  findOption(dtSel, params.get('dt'));
+  findOption(algoSel, params.get('algo'));
+  findOption(scenSel, params.get('z'));
+  const urlX = parseInt(params.get('x') ?? '');
+  if (Number.isFinite(urlX) && urlX >= 0 && urlX <= 100) xRange.value = String(urlX);
+  const urlY = parseInt(params.get('y') ?? '');
+  if (Number.isFinite(urlY) && urlY >= 1 && urlY <= 20) yRange.value = String(urlY);
+
+  function syncURL(): void {
+    const p = new URLSearchParams();
+    p.set('dt',   dtSel.value);
+    p.set('algo', algoSel.value);
+    p.set('x',    xRange.value);
+    p.set('y',    yRange.value);
+    p.set('z',    scenSel.value);
+    const next = `${window.location.pathname}?${p.toString()}${window.location.hash}`;
+    window.history.replaceState(null, '', next);
+  }
 
   function update(): void {
     const xVal = parseInt(xRange.value);
@@ -179,11 +296,12 @@ function initExhibit1(): void {
     const Z = result.moscaInequality.Z;
     const exposed = result.moscaInequality.exposed;
     const margin = result.moscaInequality.marginYears;
-    const maxBar = Math.max(X + Y, Z) * 1.1;
+    const maxBar = Math.max(X + Y, Z, 1) * 1.1;
     const pctXY = Math.min(100, ((X + Y) / maxBar) * 100);
     const pctX  = Math.min(100, (X / maxBar) * 100);
     const pctY  = Math.min(100, (Y / maxBar) * 100);
     const pctZ  = Math.min(100, (Z / maxBar) * 100);
+    const pctXYsafe = Math.max(pctXY, 0.01);
 
     resultEl.innerHTML = `
       <div class="mosca-vars">
@@ -193,14 +311,16 @@ function initExhibit1(): void {
         <div class="row"><span class="label">X + Y</span><span class="value">${X + Y} years ${exposed ? '&gt;' : '≤'} Z = ${Z}</span></div>
         <div class="row"><span class="label">${exposed ? 'Exposure' : 'Margin'}</span><span class="value" style="color:${exposed ? 'var(--color-critical)' : 'var(--color-safe)'}">${exposed ? '−' : '+'}${Math.abs(margin).toFixed(0)} years</span></div>
       </div>
-      <div class="mosca-bar-container" style="height:60px;" aria-label="Mosca Inequality visual">
-        <div class="mosca-bar-xy" style="width:${pctXY}%;top:8px;">
-          <div class="seg-x" style="width:${(pctX/pctXY)*100}%;"></div>
-          <div class="seg-y" style="width:${(pctY/pctXY)*100}%;"></div>
+      <div class="mosca-bar-container" role="img"
+           aria-label="X+Y of ${X + Y} years versus CRQC arrival in ${Z} years — ${exposed ? 'exposed by ' + Math.abs(margin).toFixed(0) + ' years' : 'safe with ' + margin.toFixed(0) + ' year margin'}">
+        <div class="mosca-bar-xy" style="width:${pctXYsafe}%;">
+          <div class="seg-x" style="width:${(pctX / pctXYsafe) * 100}%;" title="X = ${X} years (data lifetime)"></div>
+          <div class="seg-y" style="width:${(pctY / pctXYsafe) * 100}%;" title="Y = ${Y} years (migration time)"></div>
         </div>
-        <span class="mosca-bar-label" style="left:${pctXY}%;">X+Y=${X+Y}y</span>
-        <div class="mosca-bar-z" style="width:${pctZ}%;top:32px;"></div>
-        <span class="mosca-bar-label" style="left:${pctZ}%;top:18px;color:var(--color-crqc);">Z=${Z}y</span>
+        <span class="mosca-bar-label label-top" style="left:${pctXYsafe}%;">X+Y = ${X + Y}y</span>
+        <div class="mosca-bar-z" style="width:${pctZ}%;"></div>
+        <span class="mosca-bar-label label-bottom" style="left:${Math.max(pctZ, 6)}%;">Z = ${Z}y (${CURRENT_YEAR + Z})</span>
+        <div class="mosca-bar-axis"></div>
       </div>
       <div class="result-verdict ${result.riskLevel}">
         <div class="verdict-level">${riskIcon(result.riskLevel)} RISK: ${result.riskLevel.toUpperCase()}</div>
@@ -217,9 +337,11 @@ function initExhibit1(): void {
       <div class="recommendation">
         <strong>Recommendation:</strong> ${esc(result.recommendation)}
       </div>`;
+
+    syncURL();
   }
 
-  // Sync data type → X slider default
+  // Sync data type → X slider default (unless URL already pinned X)
   dtSel.addEventListener('change', () => {
     const dt = DATA_TYPES.find(d => d.name === dtSel.value);
     if (dt) {
@@ -232,6 +354,59 @@ function initExhibit1(): void {
   xRange.addEventListener('input', update);
   yRange.addEventListener('input', update);
   scenSel.addEventListener('change', update);
+
+  shareBtn.addEventListener('click', async () => {
+    syncURL();
+    const url = window.location.href;
+    let copied = false;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+        copied = true;
+      }
+    } catch { /* fall through to manual prompt */ }
+    const lbl = shareBtn.querySelector('.btn-label') as HTMLElement | null;
+    if (copied && lbl) {
+      const orig = lbl.textContent;
+      lbl.textContent = 'Copied!';
+      shareBtn.classList.add('copied');
+      setTimeout(() => {
+        lbl.textContent = orig ?? 'Copy share link';
+        shareBtn.classList.remove('copied');
+      }, 1800);
+    } else {
+      window.prompt('Copy this URL:', url);
+    }
+  });
+
+  resetBtn.addEventListener('click', () => {
+    dtSel.selectedIndex = 0;
+    algoSel.selectedIndex = 0;
+    scenSel.value = 'median';
+    const dt = DATA_TYPES.find(d => d.name === dtSel.value);
+    xRange.value = dt ? String(Math.round((dt.typicalLifetimeMin + dt.typicalLifetimeMax) / 2)) : '30';
+    yRange.value = '5';
+    update();
+  });
+
+  // Quick-scenario chips: one-click presets that hydrate all five inputs
+  document.querySelectorAll('#exhibit-1 .chip[data-preset]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = (btn as HTMLElement).dataset.preset;
+      const preset = QUICK_SCENARIOS.find(p => p.id === id);
+      if (!preset) return;
+      const dtOpt = Array.from(dtSel.options).find(o => o.value === preset.dt);
+      if (dtOpt) dtSel.value = dtOpt.value;
+      const algoOpt = Array.from(algoSel.options).find(o => o.value === preset.algo);
+      if (algoOpt) algoSel.value = algoOpt.value;
+      xRange.value = String(preset.x);
+      yRange.value = String(preset.y);
+      scenSel.value = preset.z;
+      document.querySelectorAll('#exhibit-1 .chip[data-preset]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      update();
+    });
+  });
 
   update();
 }
@@ -265,20 +440,152 @@ function renderExhibit2(): string {
       </div>
     </div>
     <div id="e2-content" aria-live="polite"></div>
+    <div class="exhibit-toolbar">
+      <button class="toolbar-btn" id="e2-csv" type="button" aria-label="Download organization risk analysis as CSV">
+        <span aria-hidden="true">⬇</span> Export CSV
+      </button>
+    </div>
   </div>
 </div>`;
 }
 
+function csvEscape(v: string | number): string {
+  const s = String(v);
+  return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+function triggerDownload(filename: string, content: string | Blob, mime?: string): void {
+  const blob = content instanceof Blob ? content : new Blob([content], { type: `${mime ?? 'text/plain'};charset=utf-8` });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/**
+ * Export an inline <svg> element as a PNG.
+ * CSS variables in the SVG are resolved against the live document so the
+ * exported image matches whatever theme is currently active.
+ */
+async function exportSVGAsPNG(svgEl: SVGSVGElement, filename: string): Promise<void> {
+  const rootStyle = getComputedStyle(document.documentElement);
+  const resolveVar = (name: string): string => rootStyle.getPropertyValue(name).trim() || '#000';
+  const bg = resolveVar('--color-surface-2') || '#1a2236';
+
+  // Clone so we don't mutate the live SVG
+  const clone = svgEl.cloneNode(true) as SVGSVGElement;
+  // Remove interactive layers (crosshair, dot group, overlay) — they shouldn't appear in the export
+  clone.querySelector('#e3-crosshair')?.remove();
+  clone.querySelector('#e3-crosshair-dots')?.remove();
+  clone.querySelector('#e3-overlay')?.remove();
+
+  // Serialize and substitute any var(--…) refs with resolved values
+  let svgStr = new XMLSerializer().serializeToString(clone);
+  svgStr = svgStr.replace(/var\(\s*(--[\w-]+)\s*\)/g, (_, name: string) => resolveVar(name));
+  if (!svgStr.includes('xmlns="http://www.w3.org/2000/svg"')) {
+    svgStr = svgStr.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ');
+  }
+
+  // Read viewBox to size the canvas
+  const vb = clone.getAttribute('viewBox')?.split(/\s+/).map(Number) ?? [0, 0, 800, 340];
+  const [, , w, h] = vb.length === 4 ? vb : [0, 0, 800, 340];
+  const scale = 2;
+
+  const svgBlob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
+  const objURL = URL.createObjectURL(svgBlob);
+
+  try {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error('SVG image failed to load'));
+      img.src = objURL;
+    });
+    const canvas = document.createElement('canvas');
+    canvas.width = w * scale;
+    canvas.height = h * scale;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('canvas 2d context unavailable');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    await new Promise<void>((resolve) => {
+      canvas.toBlob((blob) => {
+        if (blob) triggerDownload(filename, blob);
+        resolve();
+      }, 'image/png');
+    });
+  } finally {
+    URL.revokeObjectURL(objURL);
+  }
+}
+
+/** Map a 0-100 risk score to a themed CSS variable for the headline number. */
+function riskScoreColor(score: number): string {
+  if (score >= 81) return 'var(--color-critical)';
+  if (score >= 61) return 'var(--color-danger)';
+  if (score >= 41) return 'var(--color-amber)';
+  if (score >= 21) return 'var(--color-low)';
+  return 'var(--color-safe)';
+}
+
+const RISK_LEVEL_VALUE: Record<'none' | 'low' | 'medium' | 'high' | 'critical', number> = {
+  none: 0, low: 20, medium: 50, high: 80, critical: 100,
+};
+
+type E2SortKey = 'asset' | 'algo' | 'x' | 'y' | 'risk' | 'action';
+
 function initExhibit2(): void {
   const orgSel  = document.getElementById('e2-org')      as HTMLSelectElement;
   const scenSel = document.getElementById('e2-scenario') as HTMLSelectElement;
+
+  let sortKey: E2SortKey | null = 'risk';
+  let sortDir: 'asc' | 'desc' = 'desc';
+
+  function sortArrow(key: E2SortKey): string {
+    if (sortKey !== key) return '<span class="sort-arrow inactive" aria-hidden="true">⇅</span>';
+    return sortDir === 'asc'
+      ? '<span class="sort-arrow" aria-hidden="true">↑</span>'
+      : '<span class="sort-arrow" aria-hidden="true">↓</span>';
+  }
+  function ariaSort(key: E2SortKey): string {
+    if (sortKey !== key) return 'none';
+    return sortDir === 'asc' ? 'ascending' : 'descending';
+  }
 
   function update(): void {
     const orgIdx = parseInt(orgSel.value);
     const profile = PRESET_ORGANIZATIONS[orgIdx];
     const scenario = CRQC_SCENARIOS.find(s => s.label === scenSel.value) ?? CRQC_SCENARIOS[1];
     const analysis = analyzeOrganization(profile, scenario);
-    const { aggregateRisk, assetAssessments, priorityOrder, topRecommendation } = analysis;
+    const { aggregateRisk, priorityOrder, topRecommendation } = analysis;
+    let { assetAssessments } = analysis;
+
+    if (sortKey) {
+      const keyFn: Record<E2SortKey, (a: typeof assetAssessments[number]) => string | number> = {
+        asset:  a => a.assetName.toLowerCase(),
+        algo:   a => a.algorithm.toLowerCase(),
+        x:      a => a.moscaInequality.X,
+        y:      a => a.moscaInequality.Y,
+        risk:   a => RISK_LEVEL_VALUE[a.riskLevel],
+        action: a => a.recommendedAction,
+      };
+      const dir = sortDir === 'asc' ? 1 : -1;
+      const fn = keyFn[sortKey];
+      assetAssessments = [...assetAssessments].sort((a, b) => {
+        const va = fn(a);
+        const vb = fn(b);
+        if (va < vb) return -1 * dir;
+        if (va > vb) return  1 * dir;
+        return 0;
+      });
+    }
 
     const tableRows = assetAssessments.map(a => `
       <tr>
@@ -301,11 +608,32 @@ function initExhibit2(): void {
     const exposedPct = aggregateRisk.percentExposed.toFixed(1);
     const safePct = (100 - aggregateRisk.percentExposed).toFixed(1);
 
+    // TB-weighted 0-100 risk score: critical=100, high=80, medium=50, low=20, none=0
+    let weightedSum = 0;
+    let weightedTB = 0;
+    for (const a of assetAssessments) {
+      const asset = profile.assets.find(p => p.name === a.assetName);
+      if (asset) {
+        weightedSum += RISK_LEVEL_VALUE[a.riskLevel] * asset.dataSizeTB;
+        weightedTB  += asset.dataSizeTB;
+      }
+    }
+    const riskScore = weightedTB > 0 ? Math.round(weightedSum / weightedTB) : 0;
+    const scoreLabel =
+      riskScore >= 81 ? 'CRITICAL' :
+      riskScore >= 61 ? 'HIGH'     :
+      riskScore >= 41 ? 'MEDIUM'   :
+      riskScore >= 21 ? 'LOW'      : 'SAFE';
+
     const contentEl = document.getElementById('e2-content') as HTMLElement;
     contentEl.innerHTML = `
       <p style="margin-bottom:1rem;font-size:0.85rem;color:var(--color-text-muted)">${esc(profile.description)} — Migration horizon: ~${profile.typicalMigrationYears} years</p>
 
       <div class="aggregate-panel">
+        <div class="agg-stat risk-score-stat" title="TB-weighted Mosca risk score (0 = safe, 100 = critical)">
+          <div class="stat-value" style="color:${riskScoreColor(riskScore)}">${riskScore}<span class="stat-unit">/100</span></div>
+          <div class="stat-label">Risk Score · ${scoreLabel}</div>
+        </div>
         <div class="agg-stat">
           <div class="stat-value">${aggregateRisk.totalDataTB.toFixed(1)} TB</div>
           <div class="stat-label">Total Data</div>
@@ -318,16 +646,17 @@ function initExhibit2(): void {
           <div class="stat-value" style="color:var(--color-safe)">${(aggregateRisk.totalDataTB - aggregateRisk.exposedDataTB).toFixed(1)} TB</div>
           <div class="stat-label">Protected (${safePct}%)</div>
         </div>
-        <div class="agg-stat">
-          <div class="stat-value" style="color:var(--color-${aggregateRisk.immediateActionRequired ? 'critical' : 'safe'})">${aggregateRisk.immediateActionRequired ? '⚠ ACTION' : '✓ OK'}</div>
-          <div class="stat-label">Status</div>
-        </div>
       </div>
 
       <div class="table-scroll" role="region" aria-label="Asset risk table">
-      <table class="asset-table">
+      <table class="asset-table sortable">
         <thead><tr>
-          <th scope="col">Asset</th><th scope="col">Algorithm</th><th scope="col">X (Lifetime)</th><th scope="col">Y (Migration)</th><th scope="col">Risk</th><th scope="col">Action</th>
+          <th scope="col" data-sort="asset"  aria-sort="${ariaSort('asset')}"  tabindex="0">Asset ${sortArrow('asset')}</th>
+          <th scope="col" data-sort="algo"   aria-sort="${ariaSort('algo')}"   tabindex="0">Algorithm ${sortArrow('algo')}</th>
+          <th scope="col" data-sort="x"      aria-sort="${ariaSort('x')}"      tabindex="0">X (Lifetime) ${sortArrow('x')}</th>
+          <th scope="col" data-sort="y"      aria-sort="${ariaSort('y')}"      tabindex="0">Y (Migration) ${sortArrow('y')}</th>
+          <th scope="col" data-sort="risk"   aria-sort="${ariaSort('risk')}"   tabindex="0">Risk ${sortArrow('risk')}</th>
+          <th scope="col" data-sort="action" aria-sort="${ariaSort('action')}" tabindex="0">Action ${sortArrow('action')}</th>
         </tr></thead>
         <tbody>${tableRows}</tbody>
       </table>
@@ -350,10 +679,94 @@ function initExhibit2(): void {
         <strong style="font-family:var(--font-mono);font-size:0.75rem;color:var(--color-crqc)">TOP RECOMMENDATION</strong><br>
         ${esc(topRecommendation)}
       </div>`;
+
+    // Wire sortable headers (re-attached after innerHTML re-renders the table)
+    contentEl.querySelectorAll<HTMLTableCellElement>('th[data-sort]').forEach((th) => {
+      const handleSort = (): void => {
+        const key = th.dataset.sort as E2SortKey;
+        if (sortKey === key) {
+          sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+        } else {
+          sortKey = key;
+          sortDir = key === 'asset' || key === 'algo' ? 'asc' : 'desc';
+        }
+        update();
+      };
+      th.addEventListener('click', handleSort);
+      th.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          handleSort();
+        }
+      });
+    });
   }
 
   orgSel.addEventListener('change', update);
   scenSel.addEventListener('change', update);
+
+  const csvBtn = document.getElementById('e2-csv') as HTMLButtonElement;
+  csvBtn.addEventListener('click', () => {
+    const orgIdx = parseInt(orgSel.value);
+    const profile = PRESET_ORGANIZATIONS[orgIdx];
+    const scenario = CRQC_SCENARIOS.find(s => s.label === scenSel.value) ?? CRQC_SCENARIOS[1];
+    const analysis = analyzeOrganization(profile, scenario);
+
+    const header = [
+      'Organization',
+      'CRQC Scenario',
+      'CRQC Year (Z)',
+      'Asset',
+      'Algorithm',
+      'Data Lifetime X (yrs)',
+      'Migration Time Y (yrs)',
+      'X + Y',
+      'Exposed (X+Y > Z)',
+      'Margin Years',
+      'Risk Level',
+      'Action',
+      'Recommendation',
+    ];
+    const rows = analysis.assetAssessments.map(a => [
+      profile.name,
+      scenario.label,
+      String(CURRENT_YEAR + scenario.yearsFromNow),
+      a.assetName,
+      a.algorithm,
+      String(a.moscaInequality.X),
+      String(a.moscaInequality.Y),
+      String(a.moscaInequality.X + a.moscaInequality.Y),
+      a.moscaInequality.exposed ? 'YES' : 'NO',
+      a.moscaInequality.marginYears.toFixed(0),
+      a.riskLevel,
+      a.recommendedAction,
+      a.recommendation,
+    ]);
+
+    const totals = [
+      '',
+      '',
+      '',
+      'TOTAL',
+      '',
+      '',
+      '',
+      '',
+      '',
+      '',
+      `${analysis.aggregateRisk.percentExposed.toFixed(1)}% exposed`,
+      analysis.aggregateRisk.immediateActionRequired ? 'ACTION REQUIRED' : 'OK',
+      `Total ${analysis.aggregateRisk.totalDataTB.toFixed(1)} TB · Exposed ${analysis.aggregateRisk.exposedDataTB.toFixed(1)} TB`,
+    ];
+
+    const csv = [header, ...rows, totals]
+      .map(r => r.map(csvEscape).join(','))
+      .join('\r\n');
+
+    const slug = profile.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    triggerDownload(`hndl-risk-${slug}-${scenario.label}.csv`, csv, 'text/csv');
+  });
+
   update();
 }
 
@@ -367,9 +780,7 @@ const CURVE_COLORS: Record<string, string> = {
 };
 
 function renderExhibit3(): string {
-  const algoOptions = ALGORITHM_SECURITY.map(
-    (a) => `<option value="${esc(a.algorithm)}">${esc(a.algorithm)}</option>`
-  ).join('');
+  const algoOptions = buildAlgoOptgroups();
 
   return `
 <div class="exhibit" id="exhibit-3">
@@ -396,12 +807,19 @@ function renderExhibit3(): string {
     </div>
     <div class="svg-chart-wrap" id="e3-chart"></div>
     <div class="chart-legend" id="e3-legend"></div>
+    <div class="exhibit-toolbar">
+      <button class="toolbar-btn" id="e3-png" type="button" aria-label="Download exposure curve as PNG image">
+        <span aria-hidden="true">⬇</span> Download PNG
+      </button>
+    </div>
   </div>
 </div>`;
 }
 
 function initExhibit3(): void {
   const algoSel = document.getElementById('e3-algo') as HTMLSelectElement;
+  const chartEl = document.getElementById('e3-chart') as HTMLElement;
+  const legendEl = document.getElementById('e3-legend') as HTMLElement;
 
   function update(): void {
     const algoName = algoSel.value;
@@ -442,8 +860,15 @@ function initExhibit3(): void {
     svgContent += `<line x1="${todayX}" y1="${padT}" x2="${todayX}" y2="${padT + chartH}" stroke="var(--color-today)" stroke-width="2" stroke-dasharray="6,3"/>`;
     svgContent += `<text x="${todayX + 4}" y="${padT + 14}" font-size="10" fill="var(--color-today)">Today</text>`;
 
-    // CRQC markers and curves for each scenario
+    // CRQC markers and curves for each scenario — collect active curves for tooltip
     const legendItems: string[] = [];
+    const activeCurves: Array<{
+      label: string;
+      pretty: string;
+      color: string;
+      crqcYear: number;
+      data: Array<{ year: number; probDecryptable: number }>;
+    }> = [];
 
     for (const scenario of CRQC_SCENARIOS) {
       const chk = document.getElementById(`e3-chk-${scenario.label}`) as HTMLInputElement | null;
@@ -451,6 +876,14 @@ function initExhibit3(): void {
 
       const color = CURVE_COLORS[scenario.label];
       const curve = computeExposureCurve(algoName, scenario, horizonYears);
+
+      activeCurves.push({
+        label: scenario.label,
+        pretty: scenario.label.charAt(0).toUpperCase() + scenario.label.slice(1),
+        color,
+        crqcYear: CURRENT_YEAR + scenario.yearsFromNow,
+        data: curve,
+      });
 
       const points = curve.map(pt => `${xPx(pt.year)},${yPx(pt.probDecryptable)}`).join(' ');
       svgContent += `<polyline points="${points}" fill="none" stroke="${color}" stroke-width="2.5" opacity="0.9"/>`;
@@ -477,21 +910,95 @@ function initExhibit3(): void {
     const titleColor = algInfo?.broken ? 'var(--color-danger)' : algInfo?.longTermSafe ? 'var(--color-safe)' : 'var(--color-amber)';
     svgContent += `<text x="${padL + chartW / 2}" y="${svgH - 4}" text-anchor="middle" font-size="12" fill="${titleColor}">${algoName} — probability that harvested ciphertext becomes decryptable</text>`;
 
-    const algStatus = ALGORITHM_SECURITY.find(a => a.algorithm === algoName);
-    const algStatusText = algStatus?.broken ? 'broken (Shor-vulnerable)' : algStatus?.longTermSafe ? 'quantum-safe' : 'partially affected';
-    const chartEl = document.getElementById('e3-chart') as HTMLElement;
+    // Crosshair (hidden by default) + dot group + transparent overlay for pointer events
+    svgContent += `<line id="e3-crosshair" x1="0" y1="${padT}" x2="0" y2="${padT + chartH}" stroke="var(--color-text)" stroke-width="1" stroke-dasharray="3,3" opacity="0" pointer-events="none"/>`;
+    svgContent += `<g id="e3-crosshair-dots" opacity="0" pointer-events="none"></g>`;
+    svgContent += `<rect id="e3-overlay" x="${padL}" y="${padT}" width="${chartW}" height="${chartH}" fill="transparent" style="cursor:crosshair"/>`;
+
+    const algStatusText = algInfo?.broken ? 'broken (Shor-vulnerable)' : algInfo?.longTermSafe ? 'quantum-safe' : 'partially affected';
     chartEl.innerHTML = `<svg viewBox="0 0 ${svgW} ${svgH}" style="width:100%;display:block" role="img" aria-labelledby="e3-chart-title">
       <title id="e3-chart-title">Exposure probability curve for ${esc(algoName)} (${esc(algStatusText)}), showing probability of harvested ciphertext becoming decryptable from ${CURRENT_YEAR} to ${CURRENT_YEAR + horizonYears} across 4 CRQC scenarios</title>
-      ${svgContent}</svg>`;
+      ${svgContent}</svg><div class="chart-tooltip" id="e3-tooltip" role="tooltip" aria-hidden="true"></div>`;
 
-    const legendEl = document.getElementById('e3-legend') as HTMLElement;
     legendEl.innerHTML = legendItems.join('');
+
+    // ── Hover/touch crosshair wiring ─────────────────────────────────────────
+    const svg = chartEl.querySelector('svg') as SVGSVGElement;
+    const overlay = svg.querySelector('#e3-overlay') as SVGRectElement;
+    const crosshair = svg.querySelector('#e3-crosshair') as SVGLineElement;
+    const dotGroup = svg.querySelector('#e3-crosshair-dots') as SVGGElement;
+    const tooltip = chartEl.querySelector('#e3-tooltip') as HTMLElement;
+
+    function showAt(clientX: number, clientY: number): void {
+      const rect = svg.getBoundingClientRect();
+      if (rect.width === 0) return;
+      const scaleX = svgW / rect.width;
+      const svgX = (clientX - rect.left) * scaleX;
+      const clampedX = Math.max(padL, Math.min(svgW - padR, svgX));
+      const yearF = yearStart + ((clampedX - padL) / chartW) * horizonYears;
+      const year = Math.max(yearStart, Math.min(yearStart + horizonYears, Math.round(yearF)));
+      const xx = xPx(year);
+
+      crosshair.setAttribute('x1', String(xx));
+      crosshair.setAttribute('x2', String(xx));
+      crosshair.setAttribute('opacity', '0.55');
+
+      let dotsHTML = '';
+      const rows: string[] = [];
+      for (const c of activeCurves) {
+        const pt = c.data[year - yearStart];
+        if (!pt) continue;
+        const cy = yPx(pt.probDecryptable);
+        dotsHTML += `<circle cx="${xx}" cy="${cy}" r="4.5" fill="${c.color}" stroke="var(--color-bg)" stroke-width="1.5"/>`;
+        const pct = (pt.probDecryptable * 100).toFixed(1);
+        const crqcTag = year >= c.crqcYear ? ' <span style="color:var(--color-danger)">⚠</span>' : '';
+        rows.push(`<div class="tt-row"><div class="tt-dot" style="background:${c.color}"></div><span class="tt-label">${c.pretty}</span><span class="tt-value">${pct}%${crqcTag}</span></div>`);
+      }
+      dotGroup.innerHTML = dotsHTML;
+      dotGroup.setAttribute('opacity', activeCurves.length > 0 ? '1' : '0');
+
+      const yearsFromNow = year - CURRENT_YEAR;
+      tooltip.innerHTML = `<div class="tt-year">${year} <span style="color:var(--color-text-muted);font-weight:400">(${yearsFromNow >= 0 ? '+' : ''}${yearsFromNow}y)</span></div>${rows.join('') || '<div class="tt-row" style="color:var(--color-text-muted)">No scenarios selected</div>'}`;
+      tooltip.classList.add('visible');
+      tooltip.setAttribute('aria-hidden', 'false');
+
+      // Position tooltip near pointer, clamp inside chart wrap
+      const wrapRect = chartEl.getBoundingClientRect();
+      const tw = tooltip.offsetWidth;
+      const th = tooltip.offsetHeight;
+      let tx = clientX - wrapRect.left + 14;
+      let ty = clientY - wrapRect.top + 14;
+      if (tx + tw > wrapRect.width - 6) tx = clientX - wrapRect.left - tw - 14;
+      if (ty + th > wrapRect.height - 6) ty = wrapRect.height - th - 6;
+      tooltip.style.left = `${Math.max(6, tx)}px`;
+      tooltip.style.top = `${Math.max(6, ty)}px`;
+    }
+
+    function hide(): void {
+      crosshair.setAttribute('opacity', '0');
+      dotGroup.setAttribute('opacity', '0');
+      tooltip.classList.remove('visible');
+      tooltip.setAttribute('aria-hidden', 'true');
+    }
+
+    overlay.addEventListener('pointermove', (e) => showAt(e.clientX, e.clientY));
+    overlay.addEventListener('pointerdown',  (e) => showAt(e.clientX, e.clientY));
+    overlay.addEventListener('pointerleave', hide);
+    overlay.addEventListener('pointercancel', hide);
   }
 
   algoSel.addEventListener('change', update);
   CRQC_SCENARIOS.forEach(s => {
     document.getElementById(`e3-chk-${s.label}`)?.addEventListener('change', update);
   });
+
+  document.getElementById('e3-png')?.addEventListener('click', async () => {
+    const svg = chartEl.querySelector('svg');
+    if (!svg) return;
+    const algoSlug = algoSel.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    await exportSVGAsPNG(svg, `hndl-exposure-curve-${algoSlug}.png`);
+  });
+
   update();
 }
 
@@ -528,9 +1035,25 @@ function renderExhibit4(): string {
 </div>`;
 }
 
+type E4SortKey = 'start' | 'complete' | 'assets' | 'tb' | 'pct' | 'miss';
+
 function initExhibit4(): void {
   const orgSel  = document.getElementById('e4-org')      as HTMLSelectElement;
   const scenSel = document.getElementById('e4-scenario') as HTMLSelectElement;
+
+  let sortKey: E4SortKey | null = null;
+  let sortDir: 'asc' | 'desc' = 'asc';
+
+  function sortArrow(key: E4SortKey): string {
+    if (sortKey !== key) return '<span class="sort-arrow inactive" aria-hidden="true">⇅</span>';
+    return sortDir === 'asc'
+      ? '<span class="sort-arrow" aria-hidden="true">↑</span>'
+      : '<span class="sort-arrow" aria-hidden="true">↓</span>';
+  }
+  function ariaSort(key: E4SortKey): string {
+    if (sortKey !== key) return 'none';
+    return sortDir === 'asc' ? 'ascending' : 'descending';
+  }
 
   function update(): void {
     const orgIdx = parseInt(orgSel.value);
@@ -539,49 +1062,75 @@ function initExhibit4(): void {
 
     const delays = [0, 1, 2, 5, 10];
 
-    const rows = delays.map(d => {
+    interface DelayRow {
+      delay: number;
+      startYear: number;
+      completeYear: number;
+      exposedAssets: number;
+      exposedDataTB: number;
+      pctExposed: number;
+      missesWindow: boolean;
+    }
+    const totalTB = profile.assets.reduce((s, a) => s + a.dataSizeTB, 0);
+    const crqcYear = CURRENT_YEAR + scenario.yearsFromNow;
+
+    let dataRows: DelayRow[] = delays.map(d => {
       const result = whatIfMigrationDelay(profile, scenario, d);
-      const startYear = CURRENT_YEAR + d;
       const completeYear = CURRENT_YEAR + d + profile.typicalMigrationYears;
+      return {
+        delay: d,
+        startYear: CURRENT_YEAR + d,
+        completeYear,
+        exposedAssets: result.exposedAssets,
+        exposedDataTB: result.exposedDataTB,
+        pctExposed: totalTB > 0 ? (result.exposedDataTB / totalTB) * 100 : 0,
+        missesWindow: completeYear > crqcYear,
+      };
+    });
 
-      const totalTB = profile.assets.reduce((s, a) => s + a.dataSizeTB, 0);
+    if (sortKey) {
+      const keyFn: Record<E4SortKey, (r: DelayRow) => number> = {
+        start:    r => r.startYear,
+        complete: r => r.completeYear,
+        assets:   r => r.exposedAssets,
+        tb:       r => r.exposedDataTB,
+        pct:      r => r.pctExposed,
+        miss:     r => r.missesWindow ? 1 : 0,
+      };
+      const dir = sortDir === 'asc' ? 1 : -1;
+      const fn = keyFn[sortKey];
+      dataRows = [...dataRows].sort((a, b) => (fn(a) - fn(b)) * dir);
+    }
 
+    const rows = dataRows.map(r => {
       let exposedClass = 'delay-cell-safe';
-      if (result.exposedDataTB > 0) {
-        const pct = result.exposedDataTB / totalTB;
+      if (r.exposedDataTB > 0) {
+        const pct = r.exposedDataTB / totalTB;
         if (pct >= 0.6) exposedClass = 'delay-cell-critical';
         else if (pct >= 0.3) exposedClass = 'delay-cell-danger';
         else exposedClass = 'delay-cell-amber';
       }
-
-      const pctExposed = totalTB > 0
-        ? ((result.exposedDataTB / totalTB) * 100).toFixed(0)
-        : '0';
-
-      const crqcYear = CURRENT_YEAR + scenario.yearsFromNow;
-      const missesWindow = completeYear > crqcYear;
-
       return `<tr>
-        <td style="text-align:left;font-family:var(--font-mono)">Start ${startYear}${d === 0 ? ' (Now)' : ''}</td>
-        <td style="font-family:var(--font-mono)">${completeYear}</td>
-        <td class="${exposedClass}">${result.exposedAssets}</td>
-        <td class="${exposedClass}">${result.exposedDataTB.toFixed(1)} TB</td>
-        <td class="${exposedClass}">${pctExposed}%</td>
-        <td style="color:${missesWindow ? 'var(--color-danger)' : 'var(--color-safe)'};">${missesWindow ? '⚠ MISS' : '✓ BEAT'} CRQC</td>
+        <td style="text-align:left;font-family:var(--font-mono)">Start ${r.startYear}${r.delay === 0 ? ' (Now)' : ''}</td>
+        <td style="font-family:var(--font-mono)">${r.completeYear}</td>
+        <td class="${exposedClass}">${r.exposedAssets}</td>
+        <td class="${exposedClass}">${r.exposedDataTB.toFixed(1)} TB</td>
+        <td class="${exposedClass}">${r.pctExposed.toFixed(0)}%</td>
+        <td style="color:${r.missesWindow ? 'var(--color-danger)' : 'var(--color-safe)'};">${r.missesWindow ? '⚠ MISS' : '✓ BEAT'} CRQC</td>
       </tr>`;
     });
 
     const contentEl = document.getElementById('e4-content') as HTMLElement;
     contentEl.innerHTML = `
       <div class="table-scroll" role="region" aria-label="Cost of delay table">
-      <table class="delay-table">
+      <table class="delay-table sortable">
         <thead><tr>
-          <th scope="col">Migration Start</th>
-          <th scope="col">Completes By</th>
-          <th scope="col">Exposed Assets</th>
-          <th scope="col">Exposed Data</th>
-          <th scope="col">% Exposed</th>
-          <th scope="col">vs CRQC (~${CURRENT_YEAR + scenario.yearsFromNow})</th>
+          <th scope="col" data-sort="start"    aria-sort="${ariaSort('start')}"    tabindex="0">Migration Start ${sortArrow('start')}</th>
+          <th scope="col" data-sort="complete" aria-sort="${ariaSort('complete')}" tabindex="0">Completes By ${sortArrow('complete')}</th>
+          <th scope="col" data-sort="assets"   aria-sort="${ariaSort('assets')}"   tabindex="0">Exposed Assets ${sortArrow('assets')}</th>
+          <th scope="col" data-sort="tb"       aria-sort="${ariaSort('tb')}"       tabindex="0">Exposed Data ${sortArrow('tb')}</th>
+          <th scope="col" data-sort="pct"      aria-sort="${ariaSort('pct')}"      tabindex="0">% Exposed ${sortArrow('pct')}</th>
+          <th scope="col" data-sort="miss"     aria-sort="${ariaSort('miss')}"     tabindex="0">vs CRQC (~${CURRENT_YEAR + scenario.yearsFromNow}) ${sortArrow('miss')}</th>
         </tr></thead>
         <tbody>${rows.join('')}</tbody>
       </table>
@@ -592,13 +1141,33 @@ function initExhibit4(): void {
         Data encrypted <em>today</em> under classical algorithms may already be harvested
         by adversaries waiting for a CRQC. "Waiting to see" is a choice to accept exposure —
         not a neutral decision. The ${esc(scenario.label)} scenario puts CRQC arrival around
-        <strong>${CURRENT_YEAR + scenario.yearsFromNow}</strong>. 
+        <strong>${CURRENT_YEAR + scenario.yearsFromNow}</strong>.
         ${profile.name}'s migration takes ~${profile.typicalMigrationYears} years —
         starting now means completing by <strong>${CURRENT_YEAR + profile.typicalMigrationYears}</strong>.
         <br><br>
         <em>Source: Mosca &amp; Piani, GRI/evolutionQ Quantum Threat Timeline 2025.
         Migration timelines from NIST SP 1800-38B and vendor analyses.</em>
       </div>`;
+
+    contentEl.querySelectorAll<HTMLTableCellElement>('th[data-sort]').forEach((th) => {
+      const handleSort = (): void => {
+        const key = th.dataset.sort as E4SortKey;
+        if (sortKey === key) {
+          sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+        } else {
+          sortKey = key;
+          sortDir = 'asc';
+        }
+        update();
+      };
+      th.addEventListener('click', handleSort);
+      th.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          handleSort();
+        }
+      });
+    });
   }
 
   orgSel.addEventListener('change', update);
@@ -747,12 +1316,23 @@ function buildApp(): void {
   if (!app) return;
 
   app.innerHTML = `
-<header class="app-header">
+<header class="app-header" role="banner">
   <h1>crypto-lab-<span>harvest-timeline</span></h1>
-  <button class="theme-toggle" id="theme-toggle" aria-label="Toggle color theme">☀ Light</button>
+  <div class="header-actions">
+    <button class="theme-toggle" id="print-btn" type="button" aria-label="Print this report">🖶 Print</button>
+    <button class="theme-toggle" id="theme-toggle" aria-label="Toggle color theme">☀ Light</button>
+  </div>
 </header>
 
-<main class="app-main">
+<nav class="exhibit-nav" aria-label="Exhibits" id="exhibit-nav">
+  <a href="#exhibit-1" data-target="exhibit-1"><span class="nav-num">1</span> Calculator</a>
+  <a href="#exhibit-2" data-target="exhibit-2"><span class="nav-num">2</span> Org Profile</a>
+  <a href="#exhibit-3" data-target="exhibit-3"><span class="nav-num">3</span> Exposure Curve</a>
+  <a href="#exhibit-4" data-target="exhibit-4"><span class="nav-num">4</span> Cost of Delay</a>
+  <a href="#exhibit-5" data-target="exhibit-5"><span class="nav-num">5</span> Personal</a>
+</nav>
+
+<main class="app-main" id="main-content" role="main">
   <div class="mosca-banner">
     <h2>The Mosca Inequality — Is Your Data Already at Risk?</h2>
     <div class="mosca-formula">
@@ -775,6 +1355,48 @@ function buildApp(): void {
     </p>
   </div>
 
+  <details class="sources-panel">
+    <summary>Sources &amp; Methodology</summary>
+    <div class="sources-grid">
+      <div>
+        <h4>Foundational Citations</h4>
+        <ul>
+          <li><strong>Mosca, M. (2018).</strong> "Cybersecurity in an era with quantum computers: will we be ready?" <em>IEEE Security &amp; Privacy</em> 16(5), 38–41.</li>
+          <li><strong>Mosca, M. &amp; Piani, M. (2025).</strong> <em>Quantum Threat Timeline Report 2025.</em> Global Risk Institute / evolutionQ.</li>
+          <li><strong>Brassard, Høyer &amp; Tapp (1997).</strong> Quantum cryptanalysis of hash functions — collision resistance.</li>
+          <li><strong>Gidney (2025).</strong> Sub-million-qubit RSA-2048 factoring estimate.</li>
+        </ul>
+      </div>
+      <div>
+        <h4>NIST PQC Standards (2024)</h4>
+        <ul>
+          <li><strong>FIPS 203</strong> — ML-KEM (Module-Lattice KEM).</li>
+          <li><strong>FIPS 204</strong> — ML-DSA (Module-Lattice Signature).</li>
+          <li><strong>FIPS 205</strong> — SLH-DSA (Hash-Based Signature).</li>
+          <li><strong>SP 1800-38B</strong> — Migrating to Post-Quantum Cryptography.</li>
+        </ul>
+      </div>
+      <div>
+        <h4>Government Guidance</h4>
+        <ul>
+          <li><strong>NSA CNSA 2.0 (2022)</strong> — Commercial National Security Algorithm Suite 2.0.</li>
+          <li><strong>IETF RFC 8391</strong> — XMSS hash-based signatures.</li>
+          <li><strong>NIST SP 800-208</strong> — Stateful hash-based signature schemes.</li>
+        </ul>
+      </div>
+      <div>
+        <h4>Methodology Notes</h4>
+        <ul>
+          <li>The Mosca Inequality is a <em>planning</em> framework, not a compliance tool — satisfying it does not guarantee security.</li>
+          <li>Probability curves interpolate between GRI 2025 anchors (10y / 15y / 20y / 30y) with a smoothstep S-curve.</li>
+          <li>Quantum-safe algorithms are pinned to 0% exposure regardless of Mosca math.</li>
+          <li>AES-128 is treated as effectively broken for long-lived data (64-bit post-Grover).</li>
+          <li>Reference year is hardcoded to <strong>2026</strong>, anchored to the GRI 2025 report; scenario offsets do not silently drift.</li>
+        </ul>
+      </div>
+    </div>
+  </details>
+
   ${renderExhibit1()}
   ${renderExhibit2()}
   ${renderExhibit3()}
@@ -796,6 +1418,8 @@ function buildApp(): void {
 </footer>`;
 
   initTheme();
+  document.getElementById('print-btn')?.addEventListener('click', () => window.print());
+  initExhibitNav();
   initExhibit1();
   initExhibit2();
   initExhibit3();

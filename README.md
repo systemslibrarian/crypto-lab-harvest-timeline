@@ -1,5 +1,8 @@
 # crypto-lab-harvest-timeline
 
+[![CI](https://github.com/systemslibrarian/crypto-lab-harvest-timeline/actions/workflows/ci.yml/badge.svg)](https://github.com/systemslibrarian/crypto-lab-harvest-timeline/actions/workflows/ci.yml)
+[![Deploy](https://github.com/systemslibrarian/crypto-lab-harvest-timeline/actions/workflows/deploy.yml/badge.svg)](https://github.com/systemslibrarian/crypto-lab-harvest-timeline/actions/workflows/deploy.yml)
+
 **Browser-based Harvest-Now-Decrypt-Later (HNDL) risk simulator — interactive Mosca Inequality calculator with 2025 CRQC expert estimates.**
 
 > "Whether therefore ye eat, or drink, or whatsoever ye do, do all to the glory of God."  
@@ -102,9 +105,26 @@ The framework has been adopted by NIST, NSA (CNSA 2.0), UK NCSC, Germany BSI, ET
 ## Stack
 
 - **Vite** + **TypeScript strict** + **Vanilla CSS**
+- **Vitest** for unit tests (43 tests covering Mosca math, exposure curves, aggregate risk, catalog invariants)
 - SVG for timeline visualization (no canvas dependencies)
 - No backends, no tracking, no `Math.random()` (deterministic algorithms only)
 - GitHub Pages deployment
+
+---
+
+## Development
+
+```bash
+npm install        # install dependencies
+npm run dev        # start Vite dev server (http://localhost:5173)
+npm test           # run the Vitest suite once
+npm run test:watch # run tests in watch mode
+npm run build      # type-check + build to dist/
+npm run preview    # preview the production build
+```
+
+CI runs `npm test` and `npm run build` on every push and PR to `main`. The
+`deploy.yml` workflow publishes `dist/` to GitHub Pages on push to `main`.
 
 ---
 

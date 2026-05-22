@@ -4,13 +4,36 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark light" />
     <title>HNDL Timeline — Harvest-Now-Decrypt-Later Risk Simulator</title>
+    <meta name="description" content="Interactive Mosca Inequality calculator for Harvest-Now-Decrypt-Later risk. 20+ algorithms, 4 CRQC scenarios from the 2025 GRI/evolutionQ Quantum Threat Timeline Report, 5 organizational profiles, per-asset migration recommendations." />
+    <meta name="author" content="systemslibrarian" />
+    <meta name="theme-color" content="#0a0e1a" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="HNDL Timeline — Harvest-Now-Decrypt-Later Risk Simulator" />
+    <meta property="og:description" content="Mosca Inequality (X + Y > Z) calculator. 20+ algorithms · 4 CRQC scenarios · 5 organizational profiles · 2025 GRI/evolutionQ expert estimates." />
+    <meta property="og:url" content="https://systemslibrarian.github.io/crypto-lab-harvest-timeline/" />
+    <meta property="og:site_name" content="crypto-lab-harvest-timeline" />
+    <meta property="og:image" content="https://systemslibrarian.github.io/crypto-lab-harvest-timeline/og-card.svg" />
+    <meta property="og:image:type" content="image/svg+xml" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="HNDL Timeline — Mosca Inequality X + Y > Z with 2025 CRQC probability estimates" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="HNDL Timeline — HNDL Risk Simulator" />
+    <meta name="twitter:description" content="Interactive Mosca Inequality calculator. Operationalizes Harvest-Now-Decrypt-Later into per-asset risk." />
+    <meta name="twitter:image" content="https://systemslibrarian.github.io/crypto-lab-harvest-timeline/og-card.svg" />
     <script>
       const saved = localStorage.getItem('theme');
       document.documentElement.setAttribute('data-theme', saved ?? 'dark');
     </script>
   </head>
   <body>
+    <a href="#main-content" class="skip-link">Skip to content</a>
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>

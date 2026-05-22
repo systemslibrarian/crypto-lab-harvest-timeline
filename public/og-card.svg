@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"   stop-color="#0a0e1a"/>
+      <stop offset="100%" stop-color="#1a2236"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"   stop-color="#9d4edd"/>
+      <stop offset="100%" stop-color="#00d4ff"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- Left accent bar -->
+  <rect x="0" y="0" width="10" height="630" fill="url(#accent)"/>
+
+  <!-- Top-left mono tag -->
+  <text x="60" y="80" font-family="JetBrains Mono, Fira Code, Cascadia Code, monospace"
+        font-size="20" fill="#00d4ff" letter-spacing="3">CRYPTO-LAB</text>
+  <text x="60" y="115" font-family="JetBrains Mono, Fira Code, Cascadia Code, monospace"
+        font-size="20" fill="#8094b4" letter-spacing="3">HARVEST-TIMELINE</text>
+
+  <!-- Headline -->
+  <text x="60" y="240" font-family="-apple-system, Segoe UI, Roboto, sans-serif"
+        font-size="68" font-weight="800" fill="#e2e8f0">HNDL Timeline</text>
+
+  <text x="60" y="295" font-family="-apple-system, Segoe UI, Roboto, sans-serif"
+        font-size="32" font-weight="500" fill="#8094b4">Harvest-Now-Decrypt-Later</text>
+  <text x="60" y="335" font-family="-apple-system, Segoe UI, Roboto, sans-serif"
+        font-size="32" font-weight="500" fill="#8094b4">Risk Simulator</text>
+
+  <!-- Mosca formula -->
+  <g transform="translate(60, 440)">
+    <text x="0" y="0" font-family="JetBrains Mono, Fira Code, Cascadia Code, monospace"
+          font-size="110" font-weight="700" fill="#ffd700">X</text>
+    <text x="105" y="0" font-family="JetBrains Mono, Fira Code, Cascadia Code, monospace"
+          font-size="110" font-weight="700" fill="#8094b4">+</text>
+    <text x="195" y="0" font-family="JetBrains Mono, Fira Code, Cascadia Code, monospace"
+          font-size="110" font-weight="700" fill="#4a90e2">Y</text>
+    <text x="305" y="0" font-family="JetBrains Mono, Fira Code, Cascadia Code, monospace"
+          font-size="110" font-weight="700" fill="#8094b4">&gt;</text>
+    <text x="400" y="0" font-family="JetBrains Mono, Fira Code, Cascadia Code, monospace"
+          font-size="110" font-weight="700" fill="#9d4edd">Z</text>
+
+    <text x="520" y="-20" font-family="JetBrains Mono, Fira Code, Cascadia Code, monospace"
+          font-size="22" fill="#ff3366">YOUR DATA IS</text>
+    <text x="520" y="10" font-family="JetBrains Mono, Fira Code, Cascadia Code, monospace"
+          font-size="22" fill="#ff3366">ALREADY AT RISK</text>
+  </g>
+
+  <!-- Footer line -->
+  <rect x="60" y="540" width="1080" height="1" fill="#2a3a5c"/>
+
+  <text x="60" y="580" font-family="JetBrains Mono, Fira Code, Cascadia Code, monospace"
+        font-size="18" fill="#8094b4">Mosca Inequality · 20+ algorithms · 4 CRQC scenarios</text>
+  <text x="60" y="605" font-family="JetBrains Mono, Fira Code, Cascadia Code, monospace"
+        font-size="16" fill="#4a6080">2025 GRI/evolutionQ Quantum Threat Timeline Report</text>
+
+  <!-- Right side stats panel -->
+  <g transform="translate(820, 80)">
+    <rect x="0" y="0" width="320" height="380" rx="12"
+          fill="#111827" stroke="#2a3a5c" stroke-width="1"/>
+
+    <text x="20" y="40" font-family="JetBrains Mono, Fira Code, Cascadia Code, monospace"
+          font-size="14" fill="#9d4edd" letter-spacing="2">CRQC PROBABILITY</text>
+
+    <!-- 10y -->
+    <text x="20" y="90" font-family="JetBrains Mono, Fira Code, Cascadia Code, monospace"
+          font-size="14" fill="#8094b4">10 YEARS</text>
+    <text x="20" y="125" font-family="JetBrains Mono, Fira Code, Cascadia Code, monospace"
+          font-size="36" font-weight="700" fill="#ffaa00">28–49%</text>
+
+    <!-- 15y -->
+    <text x="20" y="180" font-family="JetBrains Mono, Fira Code, Cascadia Code, monospace"
+          font-size="14" fill="#8094b4">15 YEARS</text>
+    <text x="20" y="215" font-family="JetBrains Mono, Fira Code, Cascadia Code, monospace"
+          font-size="36" font-weight="700" fill="#ff3366">69% say ≥50%</text>
+
+    <!-- 20y -->
+    <text x="20" y="270" font-family="JetBrains Mono, Fira Code, Cascadia Code, monospace"
+          font-size="14" fill="#8094b4">20 YEARS</text>
+    <text x="20" y="305" font-family="JetBrains Mono, Fira Code, Cascadia Code, monospace"
+          font-size="36" font-weight="700" fill="#ff1144">92% say ≥50%</text>
+
+    <text x="20" y="355" font-family="JetBrains Mono, Fira Code, Cascadia Code, monospace"
+          font-size="12" fill="#4a6080">GRI/evolutionQ 2025 expert survey</text>
+  </g>
+</svg>

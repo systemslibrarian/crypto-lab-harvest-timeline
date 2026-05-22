@@ -11,7 +11,16 @@
  * will we be ready?" IEEE Security & Privacy, 2018.
  */
 
-export const CURRENT_YEAR = new Date().getFullYear();
+/**
+ * Reference year for all CRQC scenario timelines.
+ *
+ * CRQC_SCENARIOS.yearsFromNow (7 / 12 / 17 / 25) is calibrated against the
+ * 2025 GRI/evolutionQ Quantum Threat Timeline Report, which anchors its
+ * expert survey to 2025–2026. Using new Date().getFullYear() would silently
+ * shift CRQC arrival predictions every January, so we hardcode the anchor
+ * and bump it deliberately when a new GRI report ships.
+ */
+export const CURRENT_YEAR = 2026;
 
 /**
  * Different expert views of when CRQC arrives.
@@ -213,10 +222,12 @@ export const ALGORITHM_SECURITY: AlgorithmQuantumSecurity[] = [
   {
     algorithm: 'SHA-256',
     classicalStrength: 128,
-    quantumStrength: 128,
+    quantumStrength: 85,
     broken: false,
     longTermSafe: true,
-    notes: 'Collision resistance halved by quantum; preimage still 128 bits',
+    notes:
+      'Preimage ~128 bits post-Grover; collision ~85 bits (Brassard-Høyer-Tapp).' +
+      ' Still safe for short-lived signatures but consider SHA-384 for long horizons.',
   },
   {
     algorithm: 'SHA-384',
@@ -224,7 +235,8 @@ export const ALGORITHM_SECURITY: AlgorithmQuantumSecurity[] = [
     quantumStrength: 128,
     broken: false,
     longTermSafe: true,
-    notes: 'Preimage resistance preserved at 128 bits post-Grover',
+    notes:
+      'Preimage ~192 bits post-Grover; collision ~128 bits (BHT). CNSA 2.0 baseline.',
   },
 
   // QUANTUM-SAFE (NIST PQC standards — migrate TO these)
