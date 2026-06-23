@@ -105,10 +105,22 @@ The framework has been adopted by NIST, NSA (CNSA 2.0), UK NCSC, Germany BSI, ET
 ## Stack
 
 - **Vite** + **TypeScript strict** + **Vanilla CSS**
-- **Vitest** for unit tests (43 tests covering Mosca math, exposure curves, aggregate risk, catalog invariants)
+- **Vitest** for unit + DOM + a11y tests (76 tests: Mosca math, exposure curves, aggregate risk, catalog invariants, happy-dom smoke tests that mount the UI and verify all five exhibits render, and a WCAG-AA contrast guard that parses the CSS palette and asserts every text color clears 4.5:1 in both light and dark themes)
 - SVG for timeline visualization (no canvas dependencies)
 - No backends, no tracking, no `Math.random()` (deterministic algorithms only)
 - GitHub Pages deployment
+
+---
+
+## Accessibility & Mobile
+
+Built to meet **WCAG 2.1 AA** and work on a phone:
+
+- **Contrast:** every text color is verified ≥4.5:1 against the surfaces it sits on, in **both** light and dark themes (a CSS-parsing contrast test in CI fails the build on any regression). Severity and accent colors are themed per mode so nothing relies on a bright-on-white pairing.
+- **Color is never the only signal:** risk levels carry an icon + text label, scenario curves carry a legend and labels, and the exposure chart renders on a fixed dark panel so its multi-hue lines stay legible regardless of theme.
+- **Keyboard & screen reader:** skip link, single `banner`/`main`/`nav` landmarks, labelled form controls, `aria-live` result regions, `aria-sort` + keyboard-operable sortable tables, `aria-pressed` preset chips, an SVG `<title>` describing the chart, and a visible focus ring (`:focus-visible`).
+- **Motion & output:** honors `prefers-reduced-motion`, ships a print stylesheet, and degrades to a styled `<noscript>` fallback when JavaScript is off.
+- **Touch & layout:** ≥44px touch targets, responsive breakpoints at 900/640px, horizontally scrollable tables, and `dvh`-based sizing.
 
 ---
 

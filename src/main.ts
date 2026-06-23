@@ -148,7 +148,7 @@ function renderExhibit1(): string {
     <div class="quick-scenarios" role="group" aria-label="Quick scenarios">
       <span class="quick-label">Try:</span>
       ${QUICK_SCENARIOS.map(s => `
-        <button type="button" class="chip" data-preset="${esc(s.id)}" title="${esc(s.hint)}">
+        <button type="button" class="chip" data-preset="${esc(s.id)}" title="${esc(s.hint)}" aria-pressed="false">
           ${esc(s.label)}
         </button>`).join('')}
     </div>
@@ -341,8 +341,19 @@ function initExhibit1(): void {
     syncURL();
   }
 
+  // A preset chip stays highlighted only while every input still matches it.
+  // The moment the user touches any control by hand, the inputs have diverged
+  // from the preset, so clear the active chip to avoid a misleading highlight.
+  function clearActiveChips(): void {
+    document.querySelectorAll('#exhibit-1 .chip[data-preset]').forEach(b => {
+      b.classList.remove('active');
+      b.setAttribute('aria-pressed', 'false');
+    });
+  }
+
   // Sync data type → X slider default (unless URL already pinned X)
   dtSel.addEventListener('change', () => {
+    clearActiveChips();
     const dt = DATA_TYPES.find(d => d.name === dtSel.value);
     if (dt) {
       xRange.value = String(Math.round((dt.typicalLifetimeMin + dt.typicalLifetimeMax) / 2));
@@ -350,10 +361,11 @@ function initExhibit1(): void {
     update();
   });
 
-  algoSel.addEventListener('change', update);
-  xRange.addEventListener('input', update);
-  yRange.addEventListener('input', update);
-  scenSel.addEventListener('change', update);
+  const onManualEdit = (): void => { clearActiveChips(); update(); };
+  algoSel.addEventListener('change', onManualEdit);
+  xRange.addEventListener('input', onManualEdit);
+  yRange.addEventListener('input', onManualEdit);
+  scenSel.addEventListener('change', onManualEdit);
 
   shareBtn.addEventListener('click', async () => {
     syncURL();
@@ -380,6 +392,7 @@ function initExhibit1(): void {
   });
 
   resetBtn.addEventListener('click', () => {
+    clearActiveChips();
     dtSel.selectedIndex = 0;
     algoSel.selectedIndex = 0;
     scenSel.value = 'median';
@@ -402,8 +415,12 @@ function initExhibit1(): void {
       xRange.value = String(preset.x);
       yRange.value = String(preset.y);
       scenSel.value = preset.z;
-      document.querySelectorAll('#exhibit-1 .chip[data-preset]').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('#exhibit-1 .chip[data-preset]').forEach(b => {
+        b.classList.remove('active');
+        b.setAttribute('aria-pressed', 'false');
+      });
       btn.classList.add('active');
+      btn.setAttribute('aria-pressed', 'true');
       update();
     });
   });
@@ -475,7 +492,7 @@ function triggerDownload(filename: string, content: string | Blob, mime?: string
 async function exportSVGAsPNG(svgEl: SVGSVGElement, filename: string): Promise<void> {
   const rootStyle = getComputedStyle(document.documentElement);
   const resolveVar = (name: string): string => rootStyle.getPropertyValue(name).trim() || '#000';
-  const bg = resolveVar('--color-surface-2') || '#1a2236';
+  const bg = '#141d2e'; // chart is a fixed dark panel (see initExhibit3)
 
   // Clone so we don't mutate the live SVG
   const clone = svgEl.cloneNode(true) as SVGSVGElement;
@@ -798,8 +815,9 @@ function renderExhibit3(): string {
         <legend class="field-label">Show Scenarios</legend>
         <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.3rem">
           ${CRQC_SCENARIOS.map(s => `
-            <label style="display:flex;align-items:center;gap:0.4rem;font-size:0.78rem;cursor:pointer;color:${CURVE_COLORS[s.label]};min-height:44px">
+            <label style="display:flex;align-items:center;gap:0.4rem;font-size:0.78rem;cursor:pointer;color:var(--color-text);min-height:44px">
               <input type="checkbox" id="e3-chk-${s.label}" checked style="accent-color:${CURVE_COLORS[s.label]}">
+              <span aria-hidden="true" style="width:10px;height:10px;border-radius:2px;background:${CURVE_COLORS[s.label]};flex-shrink:0"></span>
               ${s.label.charAt(0).toUpperCase() + s.label.slice(1)}
             </label>`).join('')}
         </div>
@@ -821,13 +839,29 @@ function initExhibit3(): void {
   const chartEl = document.getElementById('e3-chart') as HTMLElement;
   const legendEl = document.getElementById('e3-legend') as HTMLElement;
 
+  // The SVG scales to its container width, so on a phone the fixed-size internal
+  // text shrinks to ~5px. In "compact" mode (narrow viewports) we enlarge fonts,
+  // paddings and stroke widths and thin out the year ticks so the chart stays
+  // legible. The chart re-renders when crossing the breakpoint (see resize wiring).
+  const isCompact = (): boolean =>
+    (typeof window !== 'undefined' ? window.innerWidth : 1024) <= 640;
+
   function update(): void {
     const algoName = algoSel.value;
     const horizonYears = 50;
-    const svgW = 800, svgH = 340;
-    const padL = 55, padR = 30, padT = 20, padB = 50;
+    const compact = isCompact();
+    const svgW = 800, svgH = compact ? 400 : 340;
+    const padL = compact ? 66 : 55, padR = compact ? 34 : 30;
+    const padT = compact ? 24 : 20, padB = compact ? 70 : 50;
     const chartW = svgW - padL - padR;
     const chartH = svgH - padT - padB;
+    const fLabel = compact ? 18 : 11; // axis tick labels
+    const fToday = compact ? 15 : 10;
+    const fCrqc = compact ? 14 : 9;   // per-scenario CRQC year markers
+    const fTitle = compact ? 17 : 12;
+    const yearStep = compact ? 10 : 5;
+    const wCurve = compact ? 3.5 : 2.5;
+    const rEnd = compact ? 5 : 3.5;
 
     const yearStart = CURRENT_YEAR;
 
@@ -838,27 +872,38 @@ function initExhibit3(): void {
       return padT + chartH - prob * chartH;
     }
 
+    // The chart is a fixed dark panel in BOTH themes. The four curves use a
+    // bright multi-hue palette (CURVE_COLORS); on a light background the amber
+    // and blue lines would fall below the WCAG 1.4.11 3:1 non-text-contrast
+    // floor. Pinning the panel + its axes/labels to fixed colors keeps the data
+    // viz legible regardless of the page theme. (The CSS sets the same panel bg.)
+    const C_AXIS = '#2a3a5c';
+    const C_LABEL = '#8094b4';
+    const C_TODAY = '#00d4ff';
+    const C_TEXT = '#e2e8f0';
+    const C_PANEL = '#141d2e';
+
     let svgContent = '';
 
     // Grid lines
     for (let y = 0; y <= 4; y++) {
       const p = y / 4;
       const yy = yPx(p);
-      svgContent += `<line x1="${padL}" y1="${yy}" x2="${svgW - padR}" y2="${yy}" stroke="var(--color-border)" stroke-width="1"/>`;
-      svgContent += `<text x="${padL - 6}" y="${yy + 4}" text-anchor="end" font-size="11" fill="var(--color-text-muted)">${(p * 100).toFixed(0)}%</text>`;
+      svgContent += `<line x1="${padL}" y1="${yy}" x2="${svgW - padR}" y2="${yy}" stroke="${C_AXIS}" stroke-width="1"/>`;
+      svgContent += `<text x="${padL - 6}" y="${yy + 4}" text-anchor="end" font-size="${fLabel}" fill="${C_LABEL}">${(p * 100).toFixed(0)}%</text>`;
     }
 
-    // Year axis ticks every 5 years
-    for (let i = 0; i <= horizonYears; i += 5) {
+    // Year axis ticks (every 5 years; every 10 on compact to avoid crowding)
+    for (let i = 0; i <= horizonYears; i += yearStep) {
       const xx = xPx(yearStart + i);
-      svgContent += `<line x1="${xx}" y1="${padT}" x2="${xx}" y2="${padT + chartH}" stroke="var(--color-border)" stroke-width="1" stroke-dasharray="3,3"/>`;
-      svgContent += `<text x="${xx}" y="${padT + chartH + 18}" text-anchor="middle" font-size="11" fill="var(--color-text-muted)">${yearStart + i}</text>`;
+      svgContent += `<line x1="${xx}" y1="${padT}" x2="${xx}" y2="${padT + chartH}" stroke="${C_AXIS}" stroke-width="1" stroke-dasharray="3,3"/>`;
+      svgContent += `<text x="${xx}" y="${padT + chartH + fLabel + 6}" text-anchor="middle" font-size="${fLabel}" fill="${C_LABEL}">${yearStart + i}</text>`;
     }
 
     // Today marker
     const todayX = xPx(CURRENT_YEAR);
-    svgContent += `<line x1="${todayX}" y1="${padT}" x2="${todayX}" y2="${padT + chartH}" stroke="var(--color-today)" stroke-width="2" stroke-dasharray="6,3"/>`;
-    svgContent += `<text x="${todayX + 4}" y="${padT + 14}" font-size="10" fill="var(--color-today)">Today</text>`;
+    svgContent += `<line x1="${todayX}" y1="${padT}" x2="${todayX}" y2="${padT + chartH}" stroke="${C_TODAY}" stroke-width="2" stroke-dasharray="6,3"/>`;
+    svgContent += `<text x="${todayX + 4}" y="${padT + fToday + 4}" font-size="${fToday}" fill="${C_TODAY}">Today</text>`;
 
     // CRQC markers and curves for each scenario — collect active curves for tooltip
     const legendItems: string[] = [];
@@ -886,32 +931,36 @@ function initExhibit3(): void {
       });
 
       const points = curve.map(pt => `${xPx(pt.year)},${yPx(pt.probDecryptable)}`).join(' ');
-      svgContent += `<polyline points="${points}" fill="none" stroke="${color}" stroke-width="2.5" opacity="0.9"/>`;
+      svgContent += `<polyline points="${points}" fill="none" stroke="${color}" stroke-width="${wCurve}" opacity="0.9"/>`;
 
       // CRQC arrival year marker
       const crqcX = xPx(CURRENT_YEAR + scenario.yearsFromNow);
       if (crqcX >= padL && crqcX <= svgW - padR) {
         svgContent += `<line x1="${crqcX}" y1="${padT}" x2="${crqcX}" y2="${padT + chartH}" stroke="${color}" stroke-width="1.5" stroke-dasharray="4,3" opacity="0.5"/>`;
-        svgContent += `<text x="${crqcX + 3}" y="${padT + chartH - 8}" font-size="9" fill="${color}" opacity="0.8">${CURRENT_YEAR + scenario.yearsFromNow}</text>`;
+        svgContent += `<text x="${crqcX + 3}" y="${padT + chartH - 8}" font-size="${fCrqc}" fill="${color}" opacity="0.8">${CURRENT_YEAR + scenario.yearsFromNow}</text>`;
       }
 
       // Annotation at end of line
       const last = curve[curve.length - 1];
       const endY = yPx(last.probDecryptable);
-      svgContent += `<circle cx="${xPx(last.year)}" cy="${endY}" r="3.5" fill="${color}"/>`;
+      svgContent += `<circle cx="${xPx(last.year)}" cy="${endY}" r="${rEnd}" fill="${color}"/>`;
 
       legendItems.push(`<div class="legend-item"><div class="legend-dot" style="background:${color}"></div><span>${scenario.label.charAt(0).toUpperCase() + scenario.label.slice(1)} scenario (CRQC ~${CURRENT_YEAR + scenario.yearsFromNow})</span></div>`);
     }
 
     // Axis border
-    svgContent += `<rect x="${padL}" y="${padT}" width="${chartW}" height="${chartH}" fill="none" stroke="var(--color-border)" stroke-width="1"/>`;
+    svgContent += `<rect x="${padL}" y="${padT}" width="${chartW}" height="${chartH}" fill="none" stroke="${C_AXIS}" stroke-width="1"/>`;
 
     const algInfo = ALGORITHM_SECURITY.find(a => a.algorithm === algoName);
-    const titleColor = algInfo?.broken ? 'var(--color-danger)' : algInfo?.longTermSafe ? 'var(--color-safe)' : 'var(--color-amber)';
-    svgContent += `<text x="${padL + chartW / 2}" y="${svgH - 4}" text-anchor="middle" font-size="12" fill="${titleColor}">${algoName} — probability that harvested ciphertext becomes decryptable</text>`;
+    // Fixed (bright) status hues to match the always-dark panel.
+    const titleColor = algInfo?.broken ? '#ff6a8e' : algInfo?.longTermSafe ? '#00ff88' : '#ffaa00';
+    const titleText = compact
+      ? `${algoName} — decryptability over time`
+      : `${algoName} — probability that harvested ciphertext becomes decryptable`;
+    svgContent += `<text x="${padL + chartW / 2}" y="${svgH - 5}" text-anchor="middle" font-size="${fTitle}" fill="${titleColor}">${titleText}</text>`;
 
     // Crosshair (hidden by default) + dot group + transparent overlay for pointer events
-    svgContent += `<line id="e3-crosshair" x1="0" y1="${padT}" x2="0" y2="${padT + chartH}" stroke="var(--color-text)" stroke-width="1" stroke-dasharray="3,3" opacity="0" pointer-events="none"/>`;
+    svgContent += `<line id="e3-crosshair" x1="0" y1="${padT}" x2="0" y2="${padT + chartH}" stroke="${C_TEXT}" stroke-width="1" stroke-dasharray="3,3" opacity="0" pointer-events="none"/>`;
     svgContent += `<g id="e3-crosshair-dots" opacity="0" pointer-events="none"></g>`;
     svgContent += `<rect id="e3-overlay" x="${padL}" y="${padT}" width="${chartW}" height="${chartH}" fill="transparent" style="cursor:crosshair"/>`;
 
@@ -949,7 +998,7 @@ function initExhibit3(): void {
         const pt = c.data[year - yearStart];
         if (!pt) continue;
         const cy = yPx(pt.probDecryptable);
-        dotsHTML += `<circle cx="${xx}" cy="${cy}" r="4.5" fill="${c.color}" stroke="var(--color-bg)" stroke-width="1.5"/>`;
+        dotsHTML += `<circle cx="${xx}" cy="${cy}" r="4.5" fill="${c.color}" stroke="${C_PANEL}" stroke-width="1.5"/>`;
         const pct = (pt.probDecryptable * 100).toFixed(1);
         const crqcTag = year >= c.crqcYear ? ' <span style="color:var(--color-danger)">⚠</span>' : '';
         rows.push(`<div class="tt-row"><div class="tt-dot" style="background:${c.color}"></div><span class="tt-label">${c.pretty}</span><span class="tt-value">${pct}%${crqcTag}</span></div>`);
@@ -990,6 +1039,14 @@ function initExhibit3(): void {
   algoSel.addEventListener('change', update);
   CRQC_SCENARIOS.forEach(s => {
     document.getElementById(`e3-chk-${s.label}`)?.addEventListener('change', update);
+  });
+
+  // Re-render only when the viewport crosses the compact breakpoint, so the
+  // chart's font/padding sizing switches without re-rendering on every pixel.
+  let lastCompact = isCompact();
+  window.addEventListener('resize', () => {
+    const c = isCompact();
+    if (c !== lastCompact) { lastCompact = c; update(); }
   });
 
   document.getElementById('e3-png')?.addEventListener('click', async () => {
