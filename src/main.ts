@@ -1469,6 +1469,14 @@ function buildApp(): void {
     CNSA 2.0: NSA CNSS Advisory 2022 ·
     No Math.random() — all deterministic · No backends · No tracking
   </p>
+  <p style="margin-top:0.5rem;">
+    Related demos:
+    <a href="https://systemslibrarian.github.io/crypto-lab-harvest-vault/" target="_blank" rel="noopener">crypto-lab-harvest-vault</a> ·
+    <a href="https://systemslibrarian.github.io/crypto-lab-pq-rotation/" target="_blank" rel="noopener">crypto-lab-pq-rotation</a> ·
+    <a href="https://systemslibrarian.github.io/crypto-lab-pq-tls-handshake/" target="_blank" rel="noopener">crypto-lab-pq-tls-handshake</a> ·
+    <a href="https://systemslibrarian.github.io/crypto-lab-shor/" target="_blank" rel="noopener">crypto-lab-shor</a> ·
+    <a href="https://systemslibrarian.github.io/crypto-lab-kyber-vault/" target="_blank" rel="noopener">crypto-lab-kyber-vault</a>
+  </p>
   <p style="margin-top:0.5rem;font-style:italic;color:var(--color-text-dim)">
     "Whether therefore ye eat, or drink, or whatsoever ye do, do all to the glory of God." — 1 Corinthians 10:31
   </p>
