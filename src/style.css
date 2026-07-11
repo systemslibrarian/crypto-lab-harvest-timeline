@@ -361,7 +361,11 @@ input[type='range'] { flex: 1; accent-color: var(--color-today); cursor: pointer
   .chart-tooltip { transition: none; }
 }
 
-.verdict-detail { font-size: 0.8rem; color: var(--color-text-muted); line-height: 1.6; }
+/* verdict-detail sits on a translucent *-dim verdict tint, which lifts the
+   effective background enough that --color-text-muted drops below AA (4.5:1).
+   Use a dedicated shade raised/darkened to clear 4.5:1 on every verdict tint. */
+.verdict-detail { font-size: 0.8rem; color: #9aabc9; line-height: 1.6; }
+[data-theme='light'] .verdict-detail { color: #3d5372; }
 
 .recommendation {
   font-size: 0.8rem;
