@@ -817,7 +817,7 @@ function renderExhibit3(): string {
           ${CRQC_SCENARIOS.map(s => `
             <label style="display:flex;align-items:center;gap:0.4rem;font-size:0.78rem;cursor:pointer;color:var(--color-text);min-height:44px">
               <input type="checkbox" id="e3-chk-${s.label}" checked style="accent-color:${CURVE_COLORS[s.label]}">
-              <span aria-hidden="true" style="width:10px;height:10px;border-radius:2px;background:${CURVE_COLORS[s.label]};flex-shrink:0"></span>
+              <span aria-hidden="true" style="width:10px;height:10px;border-radius:2px;background-color:${CURVE_COLORS[s.label]};flex-shrink:0"></span>
               ${s.label.charAt(0).toUpperCase() + s.label.slice(1)}
             </label>`).join('')}
         </div>
@@ -945,7 +945,7 @@ function initExhibit3(): void {
       const endY = yPx(last.probDecryptable);
       svgContent += `<circle cx="${xPx(last.year)}" cy="${endY}" r="${rEnd}" fill="${color}"/>`;
 
-      legendItems.push(`<div class="legend-item"><div class="legend-dot" style="background:${color}"></div><span>${scenario.label.charAt(0).toUpperCase() + scenario.label.slice(1)} scenario (CRQC ~${CURRENT_YEAR + scenario.yearsFromNow})</span></div>`);
+      legendItems.push(`<div class="legend-item"><div class="legend-dot" style="background-color:${color}"></div><span>${scenario.label.charAt(0).toUpperCase() + scenario.label.slice(1)} scenario (CRQC ~${CURRENT_YEAR + scenario.yearsFromNow})</span></div>`);
     }
 
     // Axis border
@@ -1001,7 +1001,7 @@ function initExhibit3(): void {
         dotsHTML += `<circle cx="${xx}" cy="${cy}" r="4.5" fill="${c.color}" stroke="${C_PANEL}" stroke-width="1.5"/>`;
         const pct = (pt.probDecryptable * 100).toFixed(1);
         const crqcTag = year >= c.crqcYear ? ' <span style="color:var(--color-danger)">⚠</span>' : '';
-        rows.push(`<div class="tt-row"><div class="tt-dot" style="background:${c.color}"></div><span class="tt-label">${c.pretty}</span><span class="tt-value">${pct}%${crqcTag}</span></div>`);
+        rows.push(`<div class="tt-row"><div class="tt-dot" style="background-color:${c.color}"></div><span class="tt-label">${c.pretty}</span><span class="tt-value">${pct}%${crqcTag}</span></div>`);
       }
       dotGroup.innerHTML = dotsHTML;
       dotGroup.setAttribute('opacity', activeCurves.length > 0 ? '1' : '0');
