@@ -1373,13 +1373,12 @@ function buildApp(): void {
   if (!app) return;
 
   app.innerHTML = `
-<header class="app-header" role="banner">
-  <h1>crypto-lab-<span>harvest-timeline</span></h1>
+<div class="app-header">
   <div class="header-actions">
     <button class="theme-toggle" id="print-btn" type="button" aria-label="Print this report">🖶 Print</button>
     <button class="theme-toggle" id="theme-toggle" aria-label="Toggle color theme">☀ Light</button>
   </div>
-</header>
+</div>
 
 <nav class="exhibit-nav" aria-label="Exhibits" id="exhibit-nav">
   <a href="#exhibit-1" data-target="exhibit-1"><span class="nav-num">1</span> Calculator</a>
@@ -1390,6 +1389,18 @@ function buildApp(): void {
 </nav>
 
 <main class="app-main" id="main-content" role="main">
+  <header class="cl-hero">
+    <div class="cl-hero-main">
+      <h1 class="cl-hero-title">HNDL Timeline</h1>
+      <p class="cl-hero-sub">Mosca Inequality · X + Y &gt; Z · Harvest-Now-Decrypt-Later</p>
+      <p class="cl-hero-desc">Enter a data asset's shelf life and your PQC migration time, pick an algorithm and a CRQC arrival scenario, and watch the Mosca Inequality resolve to a per-asset harvest-now-decrypt-later risk verdict.</p>
+    </div>
+    <aside class="cl-hero-why" aria-label="Why it matters">
+      <span class="cl-hero-why-label">WHY IT MATTERS</span>
+      <p class="cl-hero-why-text">An adversary can record your encrypted traffic today and decrypt it years later once a quantum computer exists. If shelf life plus migration time outruns that clock, data you send now is already compromised.</p>
+    </aside>
+  </header>
+
   <div class="mosca-banner">
     <h2>The Mosca Inequality — Is Your Data Already at Risk?</h2>
     <div class="mosca-formula">
