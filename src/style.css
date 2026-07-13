@@ -362,6 +362,8 @@ input[type='range'] { flex: 1; accent-color: var(--color-today); cursor: pointer
   .toolbar-btn:active { transform: none; }
   .skip-link { transition: none; }
   .chart-tooltip { transition: none; }
+  .harvest-step-icon { animation: none !important; }
+  .gloss-pop { transition: none !important; }
 }
 
 /* verdict-detail sits on a translucent *-dim verdict tint, which lifts the
@@ -728,6 +730,181 @@ input[type='checkbox'] {
 .chart-tooltip .tt-label { color: var(--color-text-muted); margin-right: 0.3rem; min-width: 8ch; }
 .chart-tooltip .tt-value { color: var(--color-text); font-weight: 700; }
 
+/* ── X/Y/Z inline highlight spans (shared vocabulary across teaching copy) ──── */
+.hl-x { color: var(--color-lifetime); font-weight: 700; }
+.hl-y { color: var(--color-migration); font-weight: 700; }
+.hl-z { color: var(--color-crqc); font-weight: 700; }
+
+/* ── "How the harvest works" mini-timeline (above Exhibit 1) ────────────────── */
+.harvest-explainer {
+  background: linear-gradient(135deg, var(--color-surface) 0%, var(--color-surface-2) 100%);
+  border: 1px solid var(--color-border);
+  border-left: 4px solid var(--color-lifetime);
+  border-radius: var(--radius);
+  padding: 1.5rem 2rem;
+}
+.harvest-explainer h2 {
+  font-family: var(--font-mono);
+  color: var(--color-lifetime);
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 0.75rem;
+}
+.harvest-lede { font-size: 0.9rem; line-height: 1.6; color: var(--color-text); margin-bottom: 1.25rem; max-width: 75ch; }
+.harvest-lede em { font-style: italic; color: var(--color-text); }
+
+.harvest-steps {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin: 0 0 1.25rem;
+  counter-reset: none;
+}
+.harvest-step {
+  position: relative;
+  background-color: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-left-width: 4px;
+  border-radius: var(--radius);
+  padding: 1rem 1.1rem;
+}
+.harvest-step.step-harvest { border-left-color: var(--color-lifetime); }
+.harvest-step.step-store   { border-left-color: var(--color-migration); }
+.harvest-step.step-decrypt { border-left-color: var(--color-crqc); }
+/* Arrow connectors between the three steps (desktop only) */
+.harvest-step:not(:last-child)::after {
+  content: '→';
+  position: absolute;
+  right: -0.85rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-muted);
+  font-size: 1.1rem;
+  z-index: 1;
+}
+.harvest-step-icon {
+  font-size: 1.4rem;
+  display: block;
+  margin-bottom: 0.35rem;
+  /* Subtle staged entrance; disabled under prefers-reduced-motion below. */
+  animation: harvest-pop 0.5s ease both;
+}
+.harvest-step.step-store   .harvest-step-icon { animation-delay: 0.5s; }
+.harvest-step.step-decrypt .harvest-step-icon { animation-delay: 1s; }
+@keyframes harvest-pop {
+  0%   { opacity: 0; transform: translateY(6px) scale(0.9); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+.harvest-step-year {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: block;
+  margin-bottom: 0.25rem;
+}
+.harvest-step-title {
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  color: var(--color-text);
+  margin-bottom: 0.4rem;
+}
+.harvest-step-body { font-size: 0.82rem; line-height: 1.55; color: var(--color-text-muted); }
+.harvest-step-body strong { color: var(--color-text); }
+.harvest-payoff {
+  font-size: 0.88rem;
+  line-height: 1.65;
+  color: var(--color-text);
+  background-color: rgba(0, 0, 0, 0.18);
+  border-radius: var(--radius-sm);
+  padding: 0.85rem 1rem;
+  border-left: 3px solid var(--color-crqc);
+}
+[data-theme='light'] .harvest-payoff { background-color: rgba(0, 0, 0, 0.05); }
+@media (max-width: 700px) {
+  .harvest-steps { grid-template-columns: 1fr; }
+  .harvest-step:not(:last-child)::after {
+    content: '↓';
+    right: auto; left: 50%;
+    top: auto; bottom: -0.85rem;
+    transform: translateX(-50%);
+  }
+}
+
+/* ── Inline jargon gloss (hover/focus popover) ──────────────────────────────── */
+.gloss {
+  position: relative;
+  border-bottom: 1px dotted currentColor;
+  cursor: help;
+  font-weight: inherit;
+  color: var(--color-today);
+  text-decoration: none;
+}
+.gloss:focus-visible { outline: 2px solid var(--color-today); outline-offset: 2px; border-radius: 2px; }
+.gloss-pop {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 8px);
+  z-index: 30;
+  width: min(20rem, 78vw);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-today);
+  border-radius: var(--radius-sm);
+  padding: 0.7rem 0.85rem;
+  font-family: var(--font-sans);
+  font-weight: 400;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--color-text);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(4px);
+  transition: opacity 0.14s ease, transform 0.14s ease, visibility 0.14s;
+  pointer-events: none;
+  white-space: normal;
+}
+.gloss-pop strong { color: var(--color-today); font-family: var(--font-mono); font-size: 0.75rem; }
+.gloss:hover .gloss-pop,
+.gloss:focus .gloss-pop,
+.gloss:focus-within .gloss-pop {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+.gloss-link { color: var(--color-today); text-decoration: underline; font-family: var(--font-mono); font-size: 0.72rem; display: inline-block; margin-top: 0.35rem; }
+/* A plain (non-interactive) inline marker for "CRQC" inside the narrated sentence. */
+.gloss-inline { color: var(--color-today); font-weight: 700; }
+
+/* ── Exposure-curve caption (honest points-vs-line note) ────────────────────── */
+.chart-caption {
+  font-size: 0.76rem;
+  line-height: 1.55;
+  color: var(--color-text-muted);
+  padding: 0.75rem 1rem 0;
+}
+.chart-caption strong { color: var(--color-text); }
+.chart-caption em { font-style: italic; color: var(--color-text); }
+
+/* ── Live plain-English sentence (primary narrated output, Exhibit 1) ───────── */
+.plain-sentence {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--color-text);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-left: 4px solid var(--color-migration);
+  border-radius: var(--radius-sm);
+  padding: 0.85rem 1rem;
+}
+.plain-sentence.exposed { border-left-color: var(--color-danger); }
+.plain-sentence.safe    { border-left-color: var(--color-safe); }
+.plain-sentence strong  { color: var(--color-text); }
+
 /* ── Print stylesheet ──────────────────────────────────────────────────────── */
 @media print {
   :root,
@@ -760,12 +937,16 @@ input[type='checkbox'] {
     gap: 1rem;
   }
   .exhibit,
-  .mosca-banner {
+  .mosca-banner,
+  .harvest-explainer {
     page-break-inside: avoid;
     break-inside: avoid;
     box-shadow: none !important;
     border: 1px solid #999 !important;
   }
+  .gloss-pop { display: none !important; }
+  .gloss { border-bottom: none; }
+  .harvest-step-icon { animation: none !important; }
   .exhibit { margin-bottom: 1rem; }
   .verdict-level { animation: none !important; }
   a { color: inherit !important; text-decoration: underline; }

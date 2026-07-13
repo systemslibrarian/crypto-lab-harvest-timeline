@@ -7,6 +7,9 @@ import {
   assessRisk,
   aggregateOrgRisk,
   computeExposureCurve,
+  exposureAnchors,
+  exposureModifier,
+  GROVER_PARTIAL_MODIFIER,
 } from '../src/risk-engine.ts';
 
 const median = CRQC_SCENARIOS.find((s) => s.label === 'median')!;
@@ -270,5 +273,39 @@ describe('DATA_TYPES catalog', () => {
   it('data type names are unique', () => {
     const names = DATA_TYPES.map((d) => d.name);
     expect(new Set(names).size).toBe(names.length);
+  });
+});
+
+describe('exposure curve teaching helpers', () => {
+  it('exposureAnchors flags the three directly-surveyed points as surveyed', () => {
+    const anchors = exposureAnchors(median);
+    const surveyed = anchors.filter((a) => a.surveyed).map((a) => a.yearsFromNow);
+    expect(surveyed).toEqual([10, 15, 20]);
+    // origin and 30-year extrapolation are not survey points
+    expect(anchors.find((a) => a.yearsFromNow === 0)?.surveyed).toBe(false);
+    expect(anchors.find((a) => a.yearsFromNow === 30)?.surveyed).toBe(false);
+  });
+
+  it('surveyed anchor probs equal the scenario survey fields', () => {
+    const anchors = exposureAnchors(median);
+    expect(anchors.find((a) => a.yearsFromNow === 10)?.prob).toBe(median.probabilityBy10Years);
+    expect(anchors.find((a) => a.yearsFromNow === 15)?.prob).toBe(median.probabilityBy15Years);
+    expect(anchors.find((a) => a.yearsFromNow === 20)?.prob).toBe(median.probabilityBy20Years);
+  });
+
+  it('Grover-partial algorithms get the 0.5 modifier; Shor-broken get 1.0', () => {
+    expect(exposureModifier('AES-128')).toBe(GROVER_PARTIAL_MODIFIER);
+    expect(GROVER_PARTIAL_MODIFIER).toBe(0.5);
+    expect(exposureModifier('RSA-2048')).toBe(1.0);
+  });
+
+  it('the AES-128 curve is exactly the modifier-scaled RSA curve (the ghost relationship)', () => {
+    // This is the invariant the "ghost line" visualization renders: AES-128's curve
+    // is the full Shor curve times 0.5, not an independently-shaped forecast.
+    const rsa = computeExposureCurve('RSA-2048', median, 20);
+    const aes = computeExposureCurve('AES-128', median, 20);
+    for (let i = 0; i < rsa.length; i++) {
+      expect(aes[i].probDecryptable).toBeCloseTo(rsa[i].probDecryptable * GROVER_PARTIAL_MODIFIER, 6);
+    }
   });
 });

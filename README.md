@@ -25,6 +25,8 @@ CRQC arrival probabilities use the **2025 GRI/evolutionQ Quantum Threat Timeline
 
 The simulator covers **20+ cryptographic algorithms** across **4 CRQC scenarios** (aggressive, median, pessimistic, ultra-pessimistic) and analyzes **5 realistic organizational profiles**.
 
+It also teaches the *mechanism* behind the accounting, not just the arithmetic: a **"How the harvest works" mini-timeline** shows ciphertext being copied today, stored for years, and decrypted once a CRQC arrives (so "your data is already at risk" is a mechanism, not a slogan); the load-bearing terms **CRQC**, **Shor's algorithm**, and **Grover's algorithm** carry inline hover/focus glosses wherever they first appear (cross-linked to the dedicated Shor and Grover demos); the exposure-probability chart draws the **four directly-reported 2025 survey anchor points** as ringed dots distinct from the smoothed interpolation between them; and selecting a Grover-only cipher (AES-128) overlays a **faint full-strength reference curve** so the 0.5 "weakened, not broken" modifier is visible rather than silent.
+
 ## When to Use It
 
 - Answering **"do I need to migrate, and when?"** for specific data assets in your organization
@@ -74,14 +76,16 @@ npm run dev
 
 ## Five Exhibits
 
+Above the exhibits, a **"How the harvest works" mini-timeline** grounds *why* X + Y > Z means exposure — three color-coded steps (harvest → store → decrypt) using the same X/Y/Z palette as the inequality, before any algebra appears.
+
 ### Exhibit 1 — Personal Risk Calculator
-Interactive single-asset Mosca Inequality calculator. Choose a data type, algorithm, data lifetime (X), migration time (Y), and CRQC scenario (Z). Results update live. Shows the visual X+Y vs Z bar comparison and a specific recommendation.
+Interactive single-asset Mosca Inequality calculator. Choose a data type, algorithm, data lifetime (X), migration time (Y), and CRQC scenario (Z). Results update live. A **live plain-English sentence** re-narrates the cause-and-effect on every slider move ("Your medical records must stay secret for 30 yrs; you need 5 yrs to migrate; a CRQC likely arrives in 12 yrs — so 35 > 12, exposed for 23 years"), above the visual X+Y vs Z bar and a specific recommendation. The algorithm status badge glosses the **Shor/Grover** mechanism inline.
 
 ### Exhibit 2 — Organization Risk Profile
 Multi-asset dashboard for 5 preset organizations (small medical clinic, mid-size bank, government intelligence agency, tech startup, research university). Shows per-asset risk table, aggregate TB exposure, and priority migration order.
 
 ### Exhibit 3 — Exposure Curve Over Time
-SVG year-by-year exposure probability chart (2026–2076). Overlays all 4 CRQC scenarios. Switch algorithms to see how curves shift. Quantum-safe algorithms (ML-KEM-768, etc.) hold flat at 0%.
+SVG year-by-year exposure probability chart (2026–2076). Overlays all 4 CRQC scenarios. Switch algorithms to see how curves shift. Quantum-safe algorithms (ML-KEM-768, etc.) hold flat at 0%. The four **directly-reported 2025 survey anchor points** are drawn as ringed dots (line between them is smoothed interpolation, captioned as such — not a forecast), and Grover-only ciphers overlay a **dashed full-strength reference curve** so the 0.5 modifier is visible.
 
 ### Exhibit 4 — Cost of Delay
 What-if table: what does starting migration now vs. in 1, 2, 5, or 10 years look like? Shows exposed assets, exposed TB, and whether you beat or miss the CRQC arrival window.
@@ -103,7 +107,7 @@ ML-KEM-768, ML-KEM-1024 (NIST FIPS 203, 2024), ML-DSA-65, ML-DSA-87 (FIPS 204, 2
 ## Stack
 
 - **Vite** + **TypeScript strict** + **Vanilla CSS**
-- **Vitest** for unit + DOM + a11y tests (76 tests: Mosca math, exposure curves, aggregate risk, catalog invariants, happy-dom smoke tests that mount the UI and verify all five exhibits render, and a WCAG-AA contrast guard that parses the CSS palette and asserts every text color clears 4.5:1 in both light and dark themes)
+- **Vitest** for unit + DOM + a11y tests (88 tests: Mosca math, exposure curves and their survey anchors / Grover-modifier invariants, aggregate risk, catalog invariants, happy-dom smoke tests that mount the UI and verify all five exhibits plus the harvest mini-timeline, jargon glosses, plain-English narration and the exposure-chart ghost line render, and a WCAG-AA contrast guard that parses the CSS palette and asserts every text color clears 4.5:1 in both light and dark themes)
 - SVG for timeline visualization (no canvas dependencies)
 - No backends, no tracking, no `Math.random()` (deterministic algorithms only)
 - GitHub Pages deployment
@@ -114,7 +118,7 @@ Built to meet **WCAG 2.1 AA** and work on a phone:
 
 - **Contrast:** every text color is verified ≥4.5:1 against the surfaces it sits on, in **both** light and dark themes (a CSS-parsing contrast test in CI fails the build on any regression). Severity and accent colors are themed per mode so nothing relies on a bright-on-white pairing.
 - **Color is never the only signal:** risk levels carry an icon + text label, scenario curves carry a legend and labels, and the exposure chart renders on a fixed dark panel so its multi-hue lines stay legible regardless of theme.
-- **Keyboard & screen reader:** skip link, single `banner`/`main`/`nav` landmarks, labelled form controls, `aria-live` result regions, `aria-sort` + keyboard-operable sortable tables, `aria-pressed` preset chips, an SVG `<title>` describing the chart, and a visible focus ring (`:focus-visible`).
+- **Keyboard & screen reader:** skip link, single `banner`/`main`/`nav` landmarks, labelled form controls, `aria-live` result regions, `aria-sort` + keyboard-operable sortable tables, `aria-pressed` preset chips, an SVG `<title>` describing the chart, keyboard-focusable jargon glosses with `aria-description` (no nested-interactive traps), and a visible focus ring (`:focus-visible`).
 - **Motion & output:** honors `prefers-reduced-motion`, ships a print stylesheet, and degrades to a styled `<noscript>` fallback when JavaScript is off.
 - **Touch & layout:** ≥44px touch targets, responsive breakpoints at 900/640px, horizontally scrollable tables, and `dvh`-based sizing.
 

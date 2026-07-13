@@ -12,6 +12,7 @@ import {
   analyzeOrganization,
   whatIfMigrationDelay,
 } from './scenarios.ts';
+import { exposureAnchors, exposureModifier } from './risk-engine.ts';
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -104,6 +105,131 @@ function initTheme(): void {
   });
   const cur = document.documentElement.getAttribute('data-theme') ?? 'dark';
   btn.textContent = cur === 'dark' ? '☀ Light' : '🌙 Dark';
+}
+
+// ─── Jargon glosses ──────────────────────────────────────────────────────────
+//
+// The tool renders verdicts using load-bearing terms — CRQC, Shor, Grover — that
+// a newcomer has never met. A one-line, hover/focus-expandable gloss on each
+// closes the causal gap ("why is RSA broken?") without a wall of prose. Rendered
+// as a native <abbr>-style trigger with a popover: keyboard-focusable (tabindex),
+// screen-reader-labelled (aria-describedby → the gloss text), and it links out to
+// the dedicated Shor/Grover demos for the full mechanism.
+
+interface Gloss {
+  term: string;
+  full: string;
+  body: string;
+  href?: string;
+  hrefLabel?: string;
+}
+
+const GLOSSES: Record<string, Gloss> = {
+  crqc: {
+    term: 'CRQC',
+    full: 'Cryptographically-Relevant Quantum Computer',
+    body:
+      'A quantum computer large and error-corrected enough to actually break real-world ' +
+      'cryptography (e.g. factor an RSA-2048 key). None exists yet; Z is the estimated ' +
+      'years until one does.',
+  },
+  shor: {
+    term: "Shor's algorithm",
+    full: "Shor's algorithm (1994)",
+    body:
+      "A quantum algorithm that factors large integers and solves discrete logarithms in " +
+      'polynomial time. That is exactly the hard problem RSA, Diffie-Hellman and elliptic-curve ' +
+      'keys rely on — so a CRQC running Shor recovers the private key outright. This is why ' +
+      'those algorithms are marked BROKEN, not merely weakened.',
+    href: 'https://systemslibrarian.github.io/crypto-lab-shor/',
+    hrefLabel: 'See Shor in action',
+  },
+  grover: {
+    term: "Grover's algorithm",
+    full: "Grover's algorithm (1996)",
+    body:
+      'A quantum search that finds a secret among N possibilities in about √N steps instead of N. ' +
+      'Against a symmetric key it only *halves* the effective bit-strength (AES-256 → 128-bit, ' +
+      'AES-128 → 64-bit). It weakens, it does not break — so AES-256 stays safe while AES-128 ' +
+      'becomes too weak for long-lived data.',
+    href: 'https://systemslibrarian.github.io/crypto-lab-grover/',
+    hrefLabel: 'See Grover in action',
+  },
+};
+
+let glossSeq = 0;
+
+/** Render an inline, hover/focus-expandable gloss trigger for a jargon term. */
+function gloss(key: keyof typeof GLOSSES, display?: string): string {
+  const g = GLOSSES[key];
+  if (!g) return esc(display ?? String(key));
+  const id = `gloss-${key}-${glossSeq++}`;
+  const link = g.href
+    ? `<br><a class="gloss-link" href="${esc(g.href)}" target="_blank" rel="noopener">${esc(g.hrefLabel ?? 'Learn more')} →</a>`
+    : '';
+  // The trigger is a focusable, generic span (NOT role=button) so the popover's
+  // "Learn more" link can live inside without a nested-interactive violation. The
+  // gloss text is exposed to AT via aria-description on the term itself; the popover
+  // is a supplementary role=note revealed on hover/focus for sighted users.
+  const linkNote = g.href ? ` ${g.hrefLabel ?? ''}: ${g.href}` : '';
+  return `<span class="gloss" tabindex="0" aria-description="${esc(g.full)}. ${esc(g.body)}${esc(linkNote)}">${esc(display ?? g.term)}<span class="gloss-pop" id="${id}" role="note"><strong>${esc(g.full)}</strong><br>${esc(g.body)}${link}</span></span>`;
+}
+
+// ─── HIGH: "How the harvest works" mini-timeline ─────────────────────────────
+//
+// The single biggest newcomer gap the review named: the *harvest* half of
+// Harvest-Now-Decrypt-Later is never shown. "Your data is already at risk" reads
+// as hyperbole until you SEE ciphertext being copied today and sitting in a vault
+// until a CRQC arrives. This three-step animated strip grounds WHY X+Y>Z means
+// exposure — before any algebra. Colors reuse the X/Y/Z palette so the mechanism
+// and the inequality visibly share a vocabulary.
+
+function renderHarvestTimeline(): string {
+  return `
+<section class="harvest-explainer" id="harvest-explainer" aria-labelledby="harvest-explainer-h">
+  <h2 id="harvest-explainer-h">How "harvest now, decrypt later" actually works</h2>
+  <p class="harvest-lede">
+    You don't need a quantum computer <em>today</em> to steal data protected today. An adversary
+    records your encrypted traffic now and simply waits. That is why the clock below matters — and
+    why ${gloss('crqc')} arrival (Z) is only half the story.
+  </p>
+  <ol class="harvest-steps" role="list">
+    <li class="harvest-step step-harvest" role="listitem">
+      <span class="harvest-step-icon" aria-hidden="true">📥</span>
+      <span class="harvest-step-year">Today · ${CURRENT_YEAR}</span>
+      <h3 class="harvest-step-title">1 · Harvest</h3>
+      <p class="harvest-step-body">
+        An adversary copies your <strong>ciphertext</strong> off the wire or a breached backup.
+        It's unreadable now — that's fine. They keep the bytes. Your data must stay secret for
+        <span class="hl-x">X years</span>.
+      </p>
+    </li>
+    <li class="harvest-step step-store" role="listitem">
+      <span class="harvest-step-icon" aria-hidden="true">🗄️</span>
+      <span class="harvest-step-year">${CURRENT_YEAR}–${CURRENT_YEAR + 12}…</span>
+      <h3 class="harvest-step-title">2 · Store &amp; wait</h3>
+      <p class="harvest-step-body">
+        The captured ciphertext sits in a vault for years. Meanwhile you may still be
+        <span class="hl-y">migrating (Y years)</span> to quantum-safe crypto — every asset not yet
+        migrated keeps piling into that vault.
+      </p>
+    </li>
+    <li class="harvest-step step-decrypt" role="listitem">
+      <span class="harvest-step-icon" aria-hidden="true">🔓</span>
+      <span class="harvest-step-year">CRQC · <span class="hl-z">Z years</span></span>
+      <h3 class="harvest-step-title">3 · Decrypt</h3>
+      <p class="harvest-step-body">
+        A ${gloss('crqc')} arrives and runs ${gloss('shor')} on the stored ciphertext, recovering
+        the key and reading everything harvested in step 1 — retroactively.
+      </p>
+    </li>
+  </ol>
+  <p class="harvest-payoff">
+    So if shelf-life <span class="hl-x">X</span> + migration <span class="hl-y">Y</span> outruns the
+    CRQC clock <span class="hl-z">Z</span>, data you send <em>today</em> is decrypted before it stops
+    being sensitive. That inequality — <strong>X + Y &gt; Z</strong> — is what the calculator below resolves.
+  </p>
+</section>`;
 }
 
 // ─── Exhibit 1: Personal Risk Calculator ─────────────────────────────────────
@@ -271,15 +397,18 @@ function initExhibit1(): void {
     const algInfo = ALGORITHM_SECURITY.find(a => a.algorithm === algoName);
     const statusEl = document.getElementById('e1-algo-status') as HTMLElement;
     if (algInfo) {
+      // The status badge is the first place a learner meets "Shor"/"Grover" as a
+      // load-bearing verdict, so gloss the mechanism inline (hover/focus popover).
       if (algInfo.broken) {
         statusEl.className = 'algo-status broken';
-        statusEl.textContent = `⚠ BROKEN: ${algInfo.notes}`;
+        statusEl.innerHTML = `⚠ BROKEN by ${gloss('shor')}: ${esc(algInfo.notes)}`;
       } else if (algInfo.longTermSafe) {
         statusEl.className = 'algo-status safe';
-        statusEl.textContent = `✓ QUANTUM-SAFE: ${algInfo.notes}`;
+        const g = algInfo.quantumStrength < algInfo.classicalStrength ? ` (weathers ${gloss('grover')})` : '';
+        statusEl.innerHTML = `✓ QUANTUM-SAFE${g}: ${esc(algInfo.notes)}`;
       } else {
         statusEl.className = 'algo-status partial';
-        statusEl.textContent = `~ PARTIAL: ${algInfo.notes}`;
+        statusEl.innerHTML = `~ PARTIAL — weakened by ${gloss('grover')}: ${esc(algInfo.notes)}`;
       }
     }
 
@@ -303,7 +432,21 @@ function initExhibit1(): void {
     const pctZ  = Math.min(100, (Z / maxBar) * 100);
     const pctXYsafe = Math.max(pctXY, 0.01);
 
+    // LOW: a live plain-English sentence that re-narrates cause-and-effect on
+    // every slider move — the primary, human-readable output above the algebra.
+    const dtName = dt ? esc(dt.name) : 'This data';
+    const plainSentence = exposed
+      ? `Your <strong>${dtName}</strong> must stay secret for <span class="hl-x">${X} yrs</span>; ` +
+        `you need <span class="hl-y">${Y} yrs</span> to migrate; a ` +
+        `<span class="gloss-inline">CRQC</span> likely arrives in <span class="hl-z">${Z} yrs</span> (${CURRENT_YEAR + Z}) — ` +
+        `so <strong>${X} + ${Y} = ${X + Y} &gt; ${Z}</strong>, and your data is exposed for <strong>${Math.abs(margin).toFixed(0)} years</strong>.`
+      : `Your <strong>${dtName}</strong> must stay secret for <span class="hl-x">${X} yrs</span>; ` +
+        `you finish migrating in <span class="hl-y">${Y} yrs</span>; a ` +
+        `<span class="gloss-inline">CRQC</span> arrives in <span class="hl-z">${Z} yrs</span> (${CURRENT_YEAR + Z}) — ` +
+        `so <strong>${X} + ${Y} = ${X + Y} ≤ ${Z}</strong>, with <strong>${margin.toFixed(0)} years</strong> of margin to spare.`;
+
     resultEl.innerHTML = `
+      <p class="plain-sentence ${exposed ? 'exposed' : 'safe'}">${plainSentence}</p>
       <div class="mosca-vars">
         <div class="row"><span class="label">X (data lifetime)</span><span class="value" style="color:var(--color-lifetime)">${X} years</span></div>
         <div class="row"><span class="label">Y (migration time)</span><span class="value" style="color:var(--color-migration)">${Y} years</span></div>
@@ -824,6 +967,13 @@ function renderExhibit3(): string {
       </fieldset>
     </div>
     <div class="svg-chart-wrap" id="e3-chart"></div>
+    <p class="chart-caption">
+      <strong>Reading this chart:</strong> the ringed dots are the four
+      <em>directly reported</em> anchor points from the 2025 GRI/evolutionQ expert survey
+      (the 10-year point spans a 28–49% range across experts). The line between them is a
+      smoothed <em>interpolation</em>, not a measured forecast — treat the exact percentage
+      under the crosshair as an estimate, not a promise.
+    </p>
     <div class="chart-legend" id="e3-legend"></div>
     <div class="exhibit-toolbar">
       <button class="toolbar-btn" id="e3-png" type="button" aria-label="Download exposure curve as PNG image">
@@ -905,6 +1055,16 @@ function initExhibit3(): void {
     svgContent += `<line x1="${todayX}" y1="${padT}" x2="${todayX}" y2="${padT + chartH}" stroke="${C_TODAY}" stroke-width="2" stroke-dasharray="6,3"/>`;
     svgContent += `<text x="${todayX + 4}" y="${padT + fToday + 4}" font-size="${fToday}" fill="${C_TODAY}">Today</text>`;
 
+    const algInfo = ALGORITHM_SECURITY.find(a => a.algorithm === algoName);
+    // A Grover-only algorithm (AES-128/256) is *weakened*, not broken: its curve
+    // is the full Shor curve scaled by the 0.5 modifier. Make that scaling visible
+    // — otherwise the halving is an invisible constant. We overlay a faint "ghost"
+    // of the un-scaled (full-strength, Shor-broken) curve so the learner can SEE
+    // the gap between "broken" and "merely weakened".
+    const modifier = exposureModifier(algoName);
+    const isGroverPartial = !!algInfo && !algInfo.broken && modifier < 1;
+    const C_GHOST = '#5e7bb0'; // muted steel-blue for the ghost reference curve
+
     // CRQC markers and curves for each scenario — collect active curves for tooltip
     const legendItems: string[] = [];
     const activeCurves: Array<{
@@ -915,12 +1075,23 @@ function initExhibit3(): void {
       data: Array<{ year: number; probDecryptable: number }>;
     }> = [];
 
+    let ghostDrawn = false;
+
     for (const scenario of CRQC_SCENARIOS) {
       const chk = document.getElementById(`e3-chk-${scenario.label}`) as HTMLInputElement | null;
       if (!chk?.checked) continue;
 
       const color = CURVE_COLORS[scenario.label];
       const curve = computeExposureCurve(algoName, scenario, horizonYears);
+
+      // Ghost "full-strength" reference: the same scenario's curve WITHOUT the
+      // Grover 0.5 modifier (i.e. what a Shor-broken key would show). Draw it once,
+      // for the first active scenario, so the panel isn't cluttered.
+      if (isGroverPartial && !ghostDrawn) {
+        const ghost = curve.map(pt => `${xPx(pt.year)},${yPx(Math.min(1, pt.probDecryptable / modifier))}`).join(' ');
+        svgContent += `<polyline points="${ghost}" fill="none" stroke="${C_GHOST}" stroke-width="${wCurve}" stroke-dasharray="2,4" opacity="0.55"/>`;
+        ghostDrawn = true;
+      }
 
       activeCurves.push({
         label: scenario.label,
@@ -932,6 +1103,18 @@ function initExhibit3(): void {
 
       const points = curve.map(pt => `${xPx(pt.year)},${yPx(pt.probDecryptable)}`).join(' ');
       svgContent += `<polyline points="${points}" fill="none" stroke="${color}" stroke-width="${wCurve}" opacity="0.9"/>`;
+
+      // Survey anchor points: the four DIRECTLY-REPORTED expert estimates (10/15/20y)
+      // plus the today origin — drawn as hollow ringed dots so a learner sees that
+      // the smooth line is interpolation BETWEEN four data points, not a forecast.
+      for (const a of exposureAnchors(scenario)) {
+        if (!a.surveyed) continue;
+        if (a.yearsFromNow > horizonYears) continue;
+        const ax = xPx(CURRENT_YEAR + a.yearsFromNow);
+        const ay = yPx(a.prob * modifier);
+        const rAnchor = compact ? 5.5 : 4;
+        svgContent += `<circle cx="${ax}" cy="${ay}" r="${rAnchor}" fill="${C_PANEL}" stroke="${color}" stroke-width="2"/>`;
+      }
 
       // CRQC arrival year marker
       const crqcX = xPx(CURRENT_YEAR + scenario.yearsFromNow);
@@ -948,10 +1131,19 @@ function initExhibit3(): void {
       legendItems.push(`<div class="legend-item"><div class="legend-dot" style="background-color:${color}"></div><span>${scenario.label.charAt(0).toUpperCase() + scenario.label.slice(1)} scenario (CRQC ~${CURRENT_YEAR + scenario.yearsFromNow})</span></div>`);
     }
 
+    // Ghost-curve annotation (only when a Grover-partial algorithm is selected)
+    if (isGroverPartial && ghostDrawn) {
+      const noteY = padT + fToday + 4;
+      svgContent += `<text x="${svgW - padR - 4}" y="${noteY}" text-anchor="end" font-size="${fCrqc + 1}" fill="${C_GHOST}">Grover only halves the search — curve scaled ×${modifier}, not zeroed</text>`;
+      svgContent += `<text x="${svgW - padR - 4}" y="${noteY + fCrqc + 5}" text-anchor="end" font-size="${fCrqc}" fill="${C_GHOST}" opacity="0.85">dashed = full-strength (Shor-broken) reference</text>`;
+      legendItems.push(`<div class="legend-item"><div class="legend-dot" style="background-color:${C_GHOST}"></div><span>Full-strength reference (÷${modifier} for Grover)</span></div>`);
+    }
+    // Survey-anchor legend note: ringed dots = reported data, line = interpolation.
+    legendItems.push(`<div class="legend-item"><div class="legend-dot" style="background:${C_PANEL};border:2px solid ${C_LABEL}"></div><span>Ringed dots = 2025 expert-survey points · line = smoothed estimate between them</span></div>`);
+
     // Axis border
     svgContent += `<rect x="${padL}" y="${padT}" width="${chartW}" height="${chartH}" fill="none" stroke="${C_AXIS}" stroke-width="1"/>`;
 
-    const algInfo = ALGORITHM_SECURITY.find(a => a.algorithm === algoName);
     // Fixed (bright) status hues to match the always-dark panel.
     const titleColor = algInfo?.broken ? '#ff6a8e' : algInfo?.longTermSafe ? '#00ff88' : '#ffaa00';
     const titleText = compact
@@ -1414,7 +1606,7 @@ function buildApp(): void {
     <dl class="mosca-legend">
       <div><dt class="term-x">X</dt> <dd>= years data must stay secret (shelf life)</dd></div>
       <div><dt class="term-y">Y</dt> <dd>= years to complete PQC migration</dd></div>
-      <div><dt class="term-z">Z</dt> <dd>= years until CRQC arrives</dd></div>
+      <div><dt class="term-z">Z</dt> <dd>= years until ${gloss('crqc')} arrives</dd></div>
     </dl>
     <p style="font-size:0.75rem;color:var(--color-text-dim);margin-top:0.75rem">
       Citation: Michele Mosca, "Cybersecurity in an era with quantum computers: will we be ready?" IEEE Security &amp; Privacy, 2018.
@@ -1465,6 +1657,7 @@ function buildApp(): void {
     </div>
   </details>
 
+  ${renderHarvestTimeline()}
   ${renderExhibit1()}
   ${renderExhibit2()}
   ${renderExhibit3()}

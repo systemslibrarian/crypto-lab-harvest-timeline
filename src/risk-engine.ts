@@ -532,6 +532,46 @@ export function assessRisk(
  * For quantum-safe: constant ~0%.
  * Returns array of (year, probability) pairs.
  */
+/**
+ * The four survey-anchored probability points for a scenario, plus the synthetic
+ * 30-year extrapolation the curve tails off to. Each is a *directly reported*
+ * expert estimate from the GRI/evolutionQ 2025 report (except the 0y origin and
+ * the 30y extrapolation, flagged with `surveyed:false`). Exposed so the UI can
+ * draw the real data points distinctly from the smoothed line between them.
+ */
+export interface ExposureAnchor {
+  yearsFromNow: number;
+  prob: number;
+  surveyed: boolean; // true = directly reported by the 2025 expert survey
+  label: string;
+}
+
+export function exposureAnchors(scenario: CRQCScenario): ExposureAnchor[] {
+  return [
+    { yearsFromNow: 0,  prob: 0,                              surveyed: false, label: 'today (0%)' },
+    { yearsFromNow: 10, prob: scenario.probabilityBy10Years, surveyed: true,  label: '10-year survey estimate' },
+    { yearsFromNow: 15, prob: scenario.probabilityBy15Years, surveyed: true,  label: '15-year survey estimate' },
+    { yearsFromNow: 20, prob: scenario.probabilityBy20Years, surveyed: true,  label: '20-year survey estimate' },
+    { yearsFromNow: 30, prob: Math.min(0.99, scenario.probabilityBy20Years + 0.05), surveyed: false, label: '30-year extrapolation' },
+  ];
+}
+
+/**
+ * The Grover "partial" modifier. Algorithms that are only *weakened* by Grover
+ * (AES-128) rather than *broken* by Shor never reach the full harvested-and-
+ * decryptable probability — Grover halves the effective search, it does not
+ * hand the adversary the key outright. We scale the reported CRQC probability by
+ * this factor so a symmetric cipher's exposure curve sits below a public-key
+ * algorithm's. Returns 1.0 for Shor-broken algorithms (full exposure).
+ */
+export const GROVER_PARTIAL_MODIFIER = 0.5;
+
+export function exposureModifier(algorithm: string): number {
+  const algInfo = getAlgorithmSecurity(algorithm);
+  // Partially-broken algorithms (AES-128) have reduced risk vs. a Shor-broken key.
+  return algInfo && !algInfo.broken ? GROVER_PARTIAL_MODIFIER : 1.0;
+}
+
 export function computeExposureCurve(
   algorithm: string,
   scenario: CRQCScenario,
@@ -548,19 +588,12 @@ export function computeExposureCurve(
   }
 
   // Build probability curve using known anchors from GRI 2025 report
-  // Anchor points: (0, 0%), (10y, p10), (15y, p15), (20y, p20), (crqcYear, 50%)
-  // We interpolate with a logistic/S-curve between anchors
-
-  const anchors: Array<{ yearsFromNow: number; prob: number }> = [
-    { yearsFromNow: 0, prob: 0 },
-    { yearsFromNow: 10, prob: scenario.probabilityBy10Years },
-    { yearsFromNow: 15, prob: scenario.probabilityBy15Years },
-    { yearsFromNow: 20, prob: scenario.probabilityBy20Years },
-    { yearsFromNow: 30, prob: Math.min(0.99, scenario.probabilityBy20Years + 0.05) },
-  ];
+  // Anchor points: (0, 0%), (10y, p10), (15y, p15), (20y, p20), (30y, extrap.)
+  // We interpolate with a smoothstep S-curve between anchors.
+  const anchors = exposureAnchors(scenario);
 
   // Partially-broken algorithms (AES-128) have half the risk due to reduced quantum advantage
-  const modifier = algInfo && !algInfo.broken ? 0.5 : 1.0;
+  const modifier = exposureModifier(algorithm);
 
   const result: Array<{ year: number; probDecryptable: number }> = [];
   let lastProb = 0;
