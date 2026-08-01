@@ -17,15 +17,17 @@ X + Y > Z  →  YOUR DATA IS ALREADY AT RISK
 
 *Citation: Michele Mosca, "Cybersecurity in an era with quantum computers: will we be ready?" IEEE Security & Privacy, 2018.*
 
-CRQC arrival probabilities use the **2025 GRI/evolutionQ Quantum Threat Timeline Report** (Mosca & Piani), which showed the sharpest upward shift in expert estimates since surveys began in 2019 — driven by Google's Willow processor, Gidney's sub-million-qubit RSA factoring result, and error-correction breakthroughs:
+CRQC arrival probabilities use the **GRI/evolutionQ Quantum Threat Timeline Report 2024** (Mosca & Piani, December 2024) — the most recent edition built on a survey of quantum-computing experts. The survey asks each expert for a likelihood band, then averages those bands two ways: an "optimistic" reading takes the upper edge of each band, a "pessimistic" reading the lower edge. The figures below are those **averaged probabilities that a CRQC exists by each horizon** — they are not the share of experts holding a view:
 
 | Horizon | 10-year | 15-year | 20-year |
 |---------|---------|---------|---------|
-| Probability range | 28–49% | 69% say ≥50% | 92% say ≥50% (~46% say "extremely likely") |
+| Averaged probability | ~19% (pessimistic) to ~34% (optimistic) | ~39% (pessimistic) | ~60% (pessimistic) |
+
+The report publishes the pessimistic reading at all three horizons but the optimistic reading only at 5 years (~14%) and 10 years (~34%), so this demo's aggressive and median scenarios extrapolate beyond 10 years rather than quoting the report. Separately, the report also counts respondents — at 15 years, 21 of 32 experts put the likelihood at about 50% or more — but that is a different statistic from the averaged probability and is not what the curves plot.
 
 The simulator covers **20+ cryptographic algorithms** across **4 CRQC scenarios** (aggressive, median, pessimistic, ultra-pessimistic) and analyzes **5 realistic organizational profiles**.
 
-It also teaches the *mechanism* behind the accounting, not just the arithmetic: a **"How the harvest works" mini-timeline** shows ciphertext being copied today, stored for years, and decrypted once a CRQC arrives (so "your data is already at risk" is a mechanism, not a slogan); the load-bearing terms **CRQC**, **Shor's algorithm**, and **Grover's algorithm** carry inline hover/focus glosses wherever they first appear (cross-linked to the dedicated Shor and Grover demos); the exposure-probability chart draws the **four directly-reported 2025 survey anchor points** as ringed dots distinct from the smoothed interpolation between them; and selecting a Grover-only cipher (AES-128) overlays a **faint full-strength reference curve** so the 0.5 "weakened, not broken" modifier is visible rather than silent.
+It also teaches the *mechanism* behind the accounting, not just the arithmetic: a **"How the harvest works" mini-timeline** shows ciphertext being copied today, stored for years, and decrypted once a CRQC arrives (so "your data is already at risk" is a mechanism, not a slogan); the load-bearing terms **CRQC**, **Shor's algorithm**, and **Grover's algorithm** carry inline hover/focus glosses wherever they first appear (cross-linked to the dedicated Shor and Grover demos); the exposure-probability chart draws the **surveyed 2024 anchor horizons** as ringed dots distinct from the smoothed interpolation between them; and selecting a Grover-only cipher (AES-128) overlays a **faint full-strength reference curve** so the 0.5 "weakened, not broken" modifier is visible rather than silent.
 
 ## When to Use It
 
@@ -44,7 +46,7 @@ Five interactive exhibits let you compute X+Y vs Z for a single asset, profile a
 
 ## What Can Go Wrong
 
-- **CRQC estimates are uncertain.** The 2025 GRI survey gives ranges (28–49%, not point estimates). The aggressive scenario assumes breakthroughs that might not happen. The pessimistic assumes engineering bottlenecks that might be solved.
+- **CRQC estimates are uncertain.** The 2024 GRI survey gives ranges (~19–34% at 10 years, not point estimates), and averaging coarse likelihood bands is itself a simplification the report warns about. The aggressive scenario assumes breakthroughs that might not happen. The pessimistic assumes engineering bottlenecks that might be solved.
 - **Data sensitivity lifetimes vary.** "30 years for medical records" is typical but specific records may be shorter or longer. Regulatory minimums are floors, not averages.
 - **Migration times are estimates.** Actual migration time depends heavily on organizational maturity, vendor support, and crypto-agility. 5 years for a small org could be 2 with good architecture or 10 with legacy constraints.
 - **Mosca Inequality is a planning tool, not a proof.** Satisfying the inequality doesn't guarantee safety — implementation vulnerabilities (like KyberSlash) could still leak data even with quantum-safe algorithms.
@@ -53,7 +55,7 @@ Five interactive exhibits let you compute X+Y vs Z for a single asset, profile a
 
 ## Real-World Usage
 
-The Mosca Inequality was formalized by Michele Mosca in "Cybersecurity in an era with quantum computers: will we be ready?" (IEEE Security & Privacy, 2018), building on his earlier work at the University of Waterloo and evolutionQ. The Global Risk Institute / evolutionQ Quantum Threat Timeline Report has been published annually since 2019; the 2025 edition (authored by Mosca and Marco Piani) is the most recent and shows the sharpest upward shift in expert CRQC probability estimates since the survey began.
+The Mosca Inequality was formalized by Michele Mosca in "Cybersecurity in an era with quantum computers: will we be ready?" (IEEE Security & Privacy, 2018), building on his earlier work at the University of Waterloo and evolutionQ. The Global Risk Institute / evolutionQ Quantum Threat Timeline Report has been published annually since 2019; the 2024 edition (authored by Mosca and Marco Piani) is the most recent expert survey, and reports the highest averaged 5- and 10-year likelihoods the series has recorded. The 2025 GRI publication under that banner, *Quantum Threat Timeline 2025: Executive Perspectives on Barriers to Action*, is a companion report of interviews with financial-industry executives rather than a new survey of quantum-computing experts, so it carries no updated CRQC probability estimates.
 
 The framework has been adopted by NIST, NSA (CNSA 2.0), UK NCSC, Germany BSI, ETSI, and multiple Fortune 500 cryptographic risk programs. The "Harvest-Now-Decrypt-Later" terminology itself was popularized by this risk model and now appears in NIST SP 1800-38B and related guidance documents.
 
@@ -85,7 +87,7 @@ Interactive single-asset Mosca Inequality calculator. Choose a data type, algori
 Multi-asset dashboard for 5 preset organizations (small medical clinic, mid-size bank, government intelligence agency, tech startup, research university). Shows per-asset risk table, aggregate TB exposure, and priority migration order.
 
 ### Exhibit 3 — Exposure Curve Over Time
-SVG year-by-year exposure probability chart (2026–2076). Overlays all 4 CRQC scenarios. Switch algorithms to see how curves shift. Quantum-safe algorithms (ML-KEM-768, etc.) hold flat at 0%. The four **directly-reported 2025 survey anchor points** are drawn as ringed dots (line between them is smoothed interpolation, captioned as such — not a forecast), and Grover-only ciphers overlay a **dashed full-strength reference curve** so the 0.5 modifier is visible.
+SVG year-by-year exposure probability chart (2026–2076). Overlays all 4 CRQC scenarios. Switch algorithms to see how curves shift. Quantum-safe algorithms (ML-KEM-768, etc.) hold flat at 0%. The **surveyed 2024 anchor horizons** are drawn as ringed dots (line between them is smoothed interpolation, captioned as such — not a forecast), and Grover-only ciphers overlay a **dashed full-strength reference curve** so the 0.5 modifier is visible.
 
 ### Exhibit 4 — Cost of Delay
 What-if table: what does starting migration now vs. in 1, 2, 5, or 10 years look like? Shows exposed assets, exposed TB, and whether you beat or miss the CRQC arrival window.

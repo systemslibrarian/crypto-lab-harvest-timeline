@@ -15,17 +15,31 @@
  * Reference year for all CRQC scenario timelines.
  *
  * CRQC_SCENARIOS.yearsFromNow (7 / 12 / 17 / 25) is calibrated against the
- * 2025 GRI/evolutionQ Quantum Threat Timeline Report, which anchors its
- * expert survey to 2025–2026. Using new Date().getFullYear() would silently
- * shift CRQC arrival predictions every January, so we hardcode the anchor
- * and bump it deliberately when a new GRI report ships.
+ * GRI/evolutionQ Quantum Threat Timeline Report 2024, whose horizons are
+ * measured from its 2024 expert survey. Using new Date().getFullYear() would
+ * silently shift CRQC arrival predictions every January, so we hardcode the
+ * anchor and bump it deliberately when a new GRI survey ships.
  */
 export const CURRENT_YEAR = 2026;
 
 /**
  * Different expert views of when CRQC arrives.
- * Based on 2025 GRI/evolutionQ Quantum Threat Timeline Report.
- * Citation: Mosca & Piani, evolutionQ / Global Risk Institute, 2025.
+ *
+ * The probability fields are *averaged cumulative probabilities* that a CRQC
+ * exists by the given horizon — not the share of experts holding some view.
+ * The GRI survey asks each expert for a likelihood band, then averages those
+ * bands two ways: an "optimistic" reading (upper edge of each band) and a
+ * "pessimistic" reading (lower edge). Those two curves bracket the average.
+ *
+ * Directly reported by the report: the pessimistic reading (~19% / ~39% / ~60%
+ * at 10 / 15 / 20 years) and the optimistic reading at 10 years (~34%). The
+ * remaining values are this demo's own modelled midpoints and extrapolations
+ * and are flagged as such in each scenario's citation. The report plots a
+ * mid-point curve too, but cautions it "should not be interpreted as best
+ * estimate" — so treat the median scenario as a bracket, not a forecast.
+ *
+ * Citation: Mosca, M. & Piani, M., "Quantum Threat Timeline Report 2024",
+ * Global Risk Institute / evolutionQ, December 2024.
  */
 export interface CRQCScenario {
   label: 'aggressive' | 'median' | 'pessimistic' | 'ultra-pessimistic';
@@ -41,35 +55,35 @@ export const CRQC_SCENARIOS: CRQCScenario[] = [
   {
     label: 'aggressive',
     yearsFromNow: 7, // 2033
-    probabilityBy10Years: 0.49, // 2025 optimistic expert estimate
-    probabilityBy15Years: 0.85,
-    probabilityBy20Years: 0.95,
+    probabilityBy10Years: 0.34, // GRI 2024 optimistic reading, 10-year average
+    probabilityBy15Years: 0.85, // modelled — report publishes no 15y optimistic figure
+    probabilityBy20Years: 0.95, // modelled — report publishes no 20y optimistic figure
     description:
       'Aggressive: assumes continued quantum breakthroughs (Google Willow trajectory,' +
       ' Gidney sub-million-qubit RSA factoring, error-correction acceleration)',
-    citation: 'GRI/evolutionQ 2025, optimistic interpretation',
+    citation: 'GRI/evolutionQ 2024, optimistic reading (10y reported; 15y/20y modelled)',
   },
   {
     label: 'median',
     yearsFromNow: 12, // 2038
-    probabilityBy10Years: 0.38,
-    probabilityBy15Years: 0.69, // 2025 survey: 69% say ≥50% by 15 yrs
-    probabilityBy20Years: 0.92, // 2025 survey: 92% say ≥50% by 20 yrs
+    probabilityBy10Years: 0.27, // midpoint of the two reported 10y readings (19% / 34%)
+    probabilityBy15Years: 0.62, // modelled midpoint between the curves below and above
+    probabilityBy20Years: 0.78, // modelled midpoint between the curves below and above
     description:
-      'Median: balanced view based on GRI 2025 expert consensus — sharpest upward' +
-      ' shift since surveys began in 2019',
-    citation: 'GRI/evolutionQ 2025, median interpretation — Mosca & Piani',
+      'Median: midpoint between the optimistic and pessimistic readings of the same' +
+      ' GRI expert survey — the report itself plots this as a mid-point estimate',
+    citation: 'GRI/evolutionQ 2024, midpoint of the two published readings (modelled)',
   },
   {
     label: 'pessimistic',
     yearsFromNow: 17, // 2043
-    probabilityBy10Years: 0.28, // 2025 pessimistic expert estimate
-    probabilityBy15Years: 0.5,
-    probabilityBy20Years: 0.75,
+    probabilityBy10Years: 0.19, // GRI 2024 pessimistic reading, 10-year average
+    probabilityBy15Years: 0.39, // GRI 2024 pessimistic reading, 15-year average
+    probabilityBy20Years: 0.6,  // GRI 2024 pessimistic reading, 20-year average
     description:
       'Pessimistic: assumes hard engineering challenges remain (qubit coherence,' +
       ' error-correction overhead, fault-tolerant scaling)',
-    citation: 'GRI/evolutionQ 2025, pessimistic interpretation',
+    citation: 'GRI/evolutionQ 2024, pessimistic reading (10y/15y/20y all reported)',
   },
   {
     label: 'ultra-pessimistic',
@@ -242,19 +256,22 @@ export const ALGORITHM_SECURITY: AlgorithmQuantumSecurity[] = [
   // QUANTUM-SAFE (NIST PQC standards — migrate TO these)
   {
     algorithm: 'ML-KEM-768',
-    classicalStrength: 128,
-    quantumStrength: 128,
-    broken: false,
-    longTermSafe: true,
-    notes: 'NIST FIPS 203 (2024); lattice-based KEM, no known quantum attack',
-  },
-  {
-    algorithm: 'ML-KEM-1024',
     classicalStrength: 192,
     quantumStrength: 192,
     broken: false,
     longTermSafe: true,
-    notes: 'Higher security level; CNSA 2.0 requirement for TOP SECRET',
+    notes:
+      'NIST FIPS 203 (2024); lattice-based KEM, no known quantum attack.' +
+      ' Security category 3 — pegged to key search on AES-192, not a flat 128 bits.',
+  },
+  {
+    algorithm: 'ML-KEM-1024',
+    classicalStrength: 256,
+    quantumStrength: 256,
+    broken: false,
+    longTermSafe: true,
+    notes:
+      'Security category 5 (pegged to AES-256); CNSA 2.0 requirement for TOP SECRET',
   },
   {
     algorithm: 'ML-DSA-65',
@@ -534,15 +551,17 @@ export function assessRisk(
  */
 /**
  * The four survey-anchored probability points for a scenario, plus the synthetic
- * 30-year extrapolation the curve tails off to. Each is a *directly reported*
- * expert estimate from the GRI/evolutionQ 2025 report (except the 0y origin and
- * the 30y extrapolation, flagged with `surveyed:false`). Exposed so the UI can
- * draw the real data points distinctly from the smoothed line between them.
+ * 30-year extrapolation the curve tails off to. The 10 / 15 / 20-year horizons
+ * are the ones the GRI/evolutionQ 2024 survey actually asked about; the values
+ * at them are that report's averaged estimates where it publishes them and this
+ * demo's modelled midpoints otherwise (see CRQC_SCENARIOS). The 0y origin and
+ * the 30y extrapolation are flagged with `surveyed:false`. Exposed so the UI can
+ * draw the anchor horizons distinctly from the smoothed line between them.
  */
 export interface ExposureAnchor {
   yearsFromNow: number;
   prob: number;
-  surveyed: boolean; // true = directly reported by the 2025 expert survey
+  surveyed: boolean; // true = a horizon the 2024 expert survey asked about
   label: string;
 }
 
@@ -587,7 +606,7 @@ export function computeExposureCurve(
     }));
   }
 
-  // Build probability curve using known anchors from GRI 2025 report
+  // Build probability curve using known anchors from the GRI 2024 report
   // Anchor points: (0, 0%), (10y, p10), (15y, p15), (20y, p20), (30y, extrap.)
   // We interpolate with a smoothstep S-curve between anchors.
   const anchors = exposureAnchors(scenario);

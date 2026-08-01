@@ -968,10 +968,12 @@ function renderExhibit3(): string {
     </div>
     <div class="svg-chart-wrap" id="e3-chart"></div>
     <p class="chart-caption">
-      <strong>Reading this chart:</strong> the ringed dots are the four
-      <em>directly reported</em> anchor points from the 2025 GRI/evolutionQ expert survey
-      (the 10-year point spans a 28–49% range across experts). The line between them is a
-      smoothed <em>interpolation</em>, not a measured forecast — treat the exact percentage
+      <strong>Reading this chart:</strong> the ringed dots sit on the horizons the
+      2024 GRI/evolutionQ expert survey actually asked about (10, 15 and 20 years).
+      Each value is an <em>averaged</em> probability that a CRQC exists by that year,
+      not a share of experts — the report averages the experts' likelihood bands two
+      ways, giving ~19–34% at 10 years. The line between the dots is a smoothed
+      <em>interpolation</em>, not a measured forecast — treat the exact percentage
       under the crosshair as an estimate, not a promise.
     </p>
     <div class="chart-legend" id="e3-legend"></div>
@@ -1104,9 +1106,9 @@ function initExhibit3(): void {
       const points = curve.map(pt => `${xPx(pt.year)},${yPx(pt.probDecryptable)}`).join(' ');
       svgContent += `<polyline points="${points}" fill="none" stroke="${color}" stroke-width="${wCurve}" opacity="0.9"/>`;
 
-      // Survey anchor points: the four DIRECTLY-REPORTED expert estimates (10/15/20y)
+      // Survey anchor points: the horizons the expert survey asked about (10/15/20y)
       // plus the today origin — drawn as hollow ringed dots so a learner sees that
-      // the smooth line is interpolation BETWEEN four data points, not a forecast.
+      // the smooth line is interpolation BETWEEN the anchor horizons, not a forecast.
       for (const a of exposureAnchors(scenario)) {
         if (!a.surveyed) continue;
         if (a.yearsFromNow > horizonYears) continue;
@@ -1138,8 +1140,8 @@ function initExhibit3(): void {
       svgContent += `<text x="${svgW - padR - 4}" y="${noteY + fCrqc + 5}" text-anchor="end" font-size="${fCrqc}" fill="${C_GHOST}" opacity="0.85">dashed = full-strength (Shor-broken) reference</text>`;
       legendItems.push(`<div class="legend-item"><div class="legend-dot" style="background-color:${C_GHOST}"></div><span>Full-strength reference (÷${modifier} for Grover)</span></div>`);
     }
-    // Survey-anchor legend note: ringed dots = reported data, line = interpolation.
-    legendItems.push(`<div class="legend-item"><div class="legend-dot" style="background:${C_PANEL};border:2px solid ${C_LABEL}"></div><span>Ringed dots = 2025 expert-survey points · line = smoothed estimate between them</span></div>`);
+    // Survey-anchor legend note: ringed dots = surveyed horizons, line = interpolation.
+    legendItems.push(`<div class="legend-item"><div class="legend-dot" style="background:${C_PANEL};border:2px solid ${C_LABEL}"></div><span>Ringed dots = 2024 expert-survey horizons · line = smoothed estimate between them</span></div>`);
 
     // Axis border
     svgContent += `<rect x="${padL}" y="${padT}" width="${chartW}" height="${chartH}" fill="none" stroke="${C_AXIS}" stroke-width="1"/>`;
@@ -1394,7 +1396,7 @@ function initExhibit4(): void {
         ${profile.name}'s migration takes ~${profile.typicalMigrationYears} years —
         starting now means completing by <strong>${CURRENT_YEAR + profile.typicalMigrationYears}</strong>.
         <br><br>
-        <em>Source: Mosca &amp; Piani, GRI/evolutionQ Quantum Threat Timeline 2025.
+        <em>Source: Mosca &amp; Piani, GRI/evolutionQ Quantum Threat Timeline Report 2024.
         Migration timelines from NIST SP 1800-38B and vendor analyses.</em>
       </div>`;
 
@@ -1610,8 +1612,10 @@ function buildApp(): void {
     </dl>
     <p style="font-size:0.75rem;color:var(--color-text-dim);margin-top:0.75rem">
       Citation: Michele Mosca, "Cybersecurity in an era with quantum computers: will we be ready?" IEEE Security &amp; Privacy, 2018.
-      CRQC estimates: Mosca &amp; Piani, GRI/evolutionQ Quantum Threat Timeline Report, 2025
-      (10-year: 28–49% · 15-year: 69% say ≥50% · 20-year: 92% say ≥50%).
+      CRQC estimates: Mosca &amp; Piani, GRI/evolutionQ Quantum Threat Timeline Report 2024 —
+      averaged probability that a CRQC exists by each horizon, not the share of experts
+      (10-year: ~19–34% across the report's pessimistic and optimistic readings ·
+      15-year: ~39% · 20-year: ~60%, both pessimistic reading).
     </p>
   </div>
 
@@ -1622,7 +1626,7 @@ function buildApp(): void {
         <h3>Foundational Citations</h3>
         <ul>
           <li><strong>Mosca, M. (2018).</strong> "Cybersecurity in an era with quantum computers: will we be ready?" <em>IEEE Security &amp; Privacy</em> 16(5), 38–41.</li>
-          <li><strong>Mosca, M. &amp; Piani, M. (2025).</strong> <em>Quantum Threat Timeline Report 2025.</em> Global Risk Institute / evolutionQ.</li>
+          <li><strong>Mosca, M. &amp; Piani, M. (2024).</strong> <em>Quantum Threat Timeline Report 2024.</em> Global Risk Institute / evolutionQ. The most recent edition built on a survey of quantum-computing experts; the 2025 GRI publication of that name is an executive-interview companion report, not a new survey.</li>
           <li><strong>Brassard, Høyer &amp; Tapp (1997).</strong> Quantum cryptanalysis of hash functions — collision resistance.</li>
           <li><strong>Gidney (2025).</strong> Sub-million-qubit RSA-2048 factoring estimate.</li>
         </ul>
@@ -1648,10 +1652,10 @@ function buildApp(): void {
         <h3>Methodology Notes</h3>
         <ul>
           <li>The Mosca Inequality is a <em>planning</em> framework, not a compliance tool — satisfying it does not guarantee security.</li>
-          <li>Probability curves interpolate between GRI 2025 anchors (10y / 15y / 20y / 30y) with a smoothstep S-curve.</li>
+          <li>Probability curves interpolate between GRI 2024 anchors (10y / 15y / 20y / 30y) with a smoothstep S-curve. The pessimistic scenario uses the report's published averages at all three surveyed horizons; the other scenarios are modelled midpoints and extrapolations around them.</li>
           <li>Quantum-safe algorithms are pinned to 0% exposure regardless of Mosca math.</li>
           <li>AES-128 is treated as effectively broken for long-lived data (64-bit post-Grover).</li>
-          <li>Reference year is hardcoded to <strong>2026</strong>, anchored to the GRI 2025 report; scenario offsets do not silently drift.</li>
+          <li>Reference year is hardcoded to <strong>2026</strong>, anchored to the GRI 2024 report; scenario offsets do not silently drift.</li>
         </ul>
       </div>
     </div>
@@ -1668,7 +1672,7 @@ function buildApp(): void {
 <footer class="app-footer">
   <p>
     Mosca Inequality: Michele Mosca, IEEE Security &amp; Privacy 2018 ·
-    CRQC Estimates: GRI/evolutionQ Quantum Threat Timeline Report 2025 (Mosca &amp; Piani) ·
+    CRQC Estimates: GRI/evolutionQ Quantum Threat Timeline Report 2024 (Mosca &amp; Piani) ·
     NIST PQC Standards: FIPS 203/204/205 (2024) ·
     CNSA 2.0: NSA CNSS Advisory 2022 ·
     No Math.random() — all deterministic · No backends · No tracking
