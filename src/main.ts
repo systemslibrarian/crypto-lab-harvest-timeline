@@ -1567,7 +1567,7 @@ function buildApp(): void {
   app.innerHTML = `
 <div class="app-header">
   <div class="header-actions">
-    <button class="theme-toggle" id="print-btn" type="button" aria-label="Print this report">🖶 Print</button>
+    <button class="print-btn" id="print-btn" type="button" aria-label="Print this report">🖶 Print</button>
     <button class="theme-toggle" id="theme-toggle" aria-label="Toggle color theme">☀ Light</button>
   </div>
 </div>

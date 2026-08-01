@@ -101,7 +101,11 @@ body { min-height: 100dvh; line-height: 1.6; }
 .cl-hero-why-text{margin:.35rem 0 0;font-size:.95rem;line-height:1.5;color:var(--color-text);}
 @media (max-width:640px){.cl-hero{flex-direction:column;}.cl-hero-why{flex-basis:auto;width:100%;}.cl-hero-main{flex-basis:auto;min-width:0;}}
 
-.theme-toggle {
+/* NOTE: .print-btn shares the toggle's chrome but must NOT be named
+   .theme-toggle — the lab shell in index.html hides every theme-toggle-ish
+   selector with display:none!important, which made the Print button invisible. */
+.theme-toggle,
+.print-btn {
   background-color: var(--color-surface-2);
   border: 1px solid var(--color-border);
   color: var(--color-text-muted);
@@ -112,7 +116,8 @@ body { min-height: 100dvh; line-height: 1.6; }
   font-family: var(--font-mono);
   transition: var(--transition);
 }
-.theme-toggle:hover { color: var(--color-text); border-color: var(--color-today); }
+.theme-toggle:hover,
+.print-btn:hover { color: var(--color-text); border-color: var(--color-today); }
 
 .header-actions { display: flex; gap: 0.5rem; align-items: center; }
 
@@ -498,7 +503,8 @@ select:focus-visible, input:focus-visible { outline: 2px solid var(--color-today
 select:focus:not(:focus-visible), input:focus:not(:focus-visible) { outline: none; }
 
 /* ── Touch targets: minimum 44 × 44 px per WCAG 2.5.5 ──────────────────────── */
-.theme-toggle {
+.theme-toggle,
+.print-btn {
   min-height: 44px;
   padding: 0.5rem 0.875rem;
 }
@@ -930,6 +936,7 @@ input[type='checkbox'] {
   }
   .skip-link,
   .theme-toggle,
+  .print-btn,
   .exhibit-toolbar,
   .exhibit-nav,
   .quick-scenarios,
