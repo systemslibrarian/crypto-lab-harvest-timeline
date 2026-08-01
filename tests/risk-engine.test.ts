@@ -238,6 +238,28 @@ describe('ALGORITHM_SECURITY catalog', () => {
     ).toBe(true);
   });
 
+  // FIPS 204 assigns ML-DSA-44 category 2, ML-DSA-65 category 3 and ML-DSA-87
+  // category 5. Categories 3 and 5 are pegged to key search on AES-192 and AES-256,
+  // so they are 192 and 256 bits here — not a flat 128. Guards a past regression
+  // where ML-DSA-65 was catalogued at 128/128.
+  it('rates ML-DSA parameter sets at their FIPS 204 categories', () => {
+    const mldsa65 = ALGORITHM_SECURITY.find((a) => a.algorithm === 'ML-DSA-65')!;
+    expect(mldsa65.classicalStrength).toBe(192);
+    expect(mldsa65.quantumStrength).toBe(192);
+
+    const mldsa87 = ALGORITHM_SECURITY.find((a) => a.algorithm === 'ML-DSA-87')!;
+    expect(mldsa87.classicalStrength).toBe(256);
+    expect(mldsa87.quantumStrength).toBe(256);
+  });
+
+  // A category-N signature and a category-N KEM must not disagree on bits.
+  it('keeps ML-DSA and ML-KEM consistent at equal NIST categories', () => {
+    const bits = (name: string) =>
+      ALGORITHM_SECURITY.find((a) => a.algorithm === name)!.classicalStrength;
+    expect(bits('ML-DSA-65')).toBe(bits('ML-KEM-768'));
+    expect(bits('ML-DSA-87')).toBe(bits('ML-KEM-1024'));
+  });
+
   it('all RSA/ECDSA/Ed25519/X25519 variants are marked broken', () => {
     const classical = ALGORITHM_SECURITY.filter(
       (a) =>

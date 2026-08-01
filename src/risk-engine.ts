@@ -275,19 +275,23 @@ export const ALGORITHM_SECURITY: AlgorithmQuantumSecurity[] = [
   },
   {
     algorithm: 'ML-DSA-65',
-    classicalStrength: 128,
-    quantumStrength: 128,
-    broken: false,
-    longTermSafe: true,
-    notes: 'NIST FIPS 204 (2024); lattice-based signatures',
-  },
-  {
-    algorithm: 'ML-DSA-87',
     classicalStrength: 192,
     quantumStrength: 192,
     broken: false,
     longTermSafe: true,
-    notes: 'Higher security level FIPS 204 variant',
+    notes:
+      'NIST FIPS 204 (2024); lattice-based signatures.' +
+      ' Security category 3 — pegged to key search on AES-192, not a flat 128 bits.',
+  },
+  {
+    algorithm: 'ML-DSA-87',
+    classicalStrength: 256,
+    quantumStrength: 256,
+    broken: false,
+    longTermSafe: true,
+    notes:
+      'NIST FIPS 204 (2024); highest ML-DSA parameter set.' +
+      ' Security category 5 (pegged to AES-256) — the signature counterpart to ML-KEM-1024.',
   },
   {
     algorithm: 'SLH-DSA',
