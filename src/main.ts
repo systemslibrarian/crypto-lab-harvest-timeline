@@ -1619,7 +1619,7 @@ function buildApp(): void {
     <summary>Sources &amp; Methodology</summary>
     <div class="sources-grid">
       <div>
-        <h4>Foundational Citations</h4>
+        <h3>Foundational Citations</h3>
         <ul>
           <li><strong>Mosca, M. (2018).</strong> "Cybersecurity in an era with quantum computers: will we be ready?" <em>IEEE Security &amp; Privacy</em> 16(5), 38–41.</li>
           <li><strong>Mosca, M. &amp; Piani, M. (2025).</strong> <em>Quantum Threat Timeline Report 2025.</em> Global Risk Institute / evolutionQ.</li>
@@ -1628,7 +1628,7 @@ function buildApp(): void {
         </ul>
       </div>
       <div>
-        <h4>NIST PQC Standards (2024)</h4>
+        <h3>NIST PQC Standards (2024)</h3>
         <ul>
           <li><strong>FIPS 203</strong> — ML-KEM (Module-Lattice KEM).</li>
           <li><strong>FIPS 204</strong> — ML-DSA (Module-Lattice Signature).</li>
@@ -1637,7 +1637,7 @@ function buildApp(): void {
         </ul>
       </div>
       <div>
-        <h4>Government Guidance</h4>
+        <h3>Government Guidance</h3>
         <ul>
           <li><strong>NSA CNSA 2.0 (2022)</strong> — Commercial National Security Algorithm Suite 2.0.</li>
           <li><strong>IETF RFC 8391</strong> — XMSS hash-based signatures.</li>
@@ -1645,7 +1645,7 @@ function buildApp(): void {
         </ul>
       </div>
       <div>
-        <h4>Methodology Notes</h4>
+        <h3>Methodology Notes</h3>
         <ul>
           <li>The Mosca Inequality is a <em>planning</em> framework, not a compliance tool — satisfying it does not guarantee security.</li>
           <li>Probability curves interpolate between GRI 2025 anchors (10y / 15y / 20y / 30y) with a smoothstep S-curve.</li>
