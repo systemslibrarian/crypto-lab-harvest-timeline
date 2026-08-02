@@ -1286,7 +1286,7 @@ function renderExhibit4(): string {
 </div>`;
 }
 
-type E4SortKey = 'start' | 'complete' | 'assets' | 'tb' | 'pct' | 'miss';
+type E4SortKey = 'start' | 'complete' | 'assets' | 'tb' | 'pct' | 'window' | 'miss';
 
 function initExhibit4(): void {
   const orgSel  = document.getElementById('e4-org')      as HTMLSelectElement;
@@ -1321,6 +1321,14 @@ function initExhibit4(): void {
       exposedDataTB: number;
       pctExposed: number;
       missesWindow: boolean;
+      /**
+       * Years the migration finishes AFTER a CRQC arrives. Exposure counts are
+       * per-asset booleans (Mosca: X + Y > Z), so once every at-risk asset is
+       * already over the line they saturate and stop growing with delay. This
+       * is the quantity that keeps growing, and it is what "exposure window"
+       * actually means.
+       */
+      windowYears: number;
     }
     const totalTB = profile.assets.reduce((s, a) => s + a.dataSizeTB, 0);
     const crqcYear = CURRENT_YEAR + scenario.yearsFromNow;
@@ -1336,6 +1344,7 @@ function initExhibit4(): void {
         exposedDataTB: result.exposedDataTB,
         pctExposed: totalTB > 0 ? (result.exposedDataTB / totalTB) * 100 : 0,
         missesWindow: completeYear > crqcYear,
+        windowYears: Math.max(0, completeYear - crqcYear),
       };
     });
 
@@ -1346,6 +1355,7 @@ function initExhibit4(): void {
         assets:   r => r.exposedAssets,
         tb:       r => r.exposedDataTB,
         pct:      r => r.pctExposed,
+        window:   r => r.windowYears,
         miss:     r => r.missesWindow ? 1 : 0,
       };
       const dir = sortDir === 'asc' ? 1 : -1;
@@ -1367,9 +1377,32 @@ function initExhibit4(): void {
         <td class="${exposedClass}">${r.exposedAssets}</td>
         <td class="${exposedClass}">${r.exposedDataTB.toFixed(1)} TB</td>
         <td class="${exposedClass}">${r.pctExposed.toFixed(0)}%</td>
+        <td class="${r.windowYears > 0 ? 'delay-cell-danger' : 'delay-cell-safe'}">${r.windowYears === 0 ? '0' : `+${r.windowYears}`} yr</td>
         <td style="color:${r.missesWindow ? 'var(--color-danger)' : 'var(--color-safe)'};">${r.missesWindow ? '⚠ MISS' : '✓ BEAT'} CRQC</td>
       </tr>`;
     });
+
+    // The headline has to describe THIS table. Exposure counts are per-asset
+    // booleans, so for most profiles every at-risk asset is already exposed at
+    // zero delay and those columns stay flat no matter how long you wait —
+    // claiming they rise would be contradicted by the rows directly below.
+    // What always grows is how far past a CRQC the migration finishes.
+    const byDelay = [...dataRows].sort((a, b) => a.delay - b.delay);
+    const first = byDelay[0];
+    const last = byDelay[byDelay.length - 1];
+    const exposureGrows = last.exposedDataTB > first.exposedDataTB;
+    const windowGrows = last.windowYears > first.windowYears;
+    const insightLead = exposureGrows
+      ? `Delay puts more data past the line: waiting ${last.delay} years takes exposure from
+         ${first.exposedDataTB.toFixed(1)} TB to ${last.exposedDataTB.toFixed(1)} TB.`
+      : windowGrows
+        ? `For ${esc(profile.name)}, every at-risk asset is already exposed at zero delay, so
+           those columns cannot climb any further — what grows is the window: waiting
+           ${last.delay} years finishes ${last.windowYears} years past a CRQC instead of
+           ${first.windowYears}.`
+        : `For ${esc(profile.name)} under this scenario, migration beats a CRQC at every delay
+           shown, so no row is exposed and no window opens. Try a nearer CRQC scenario or a
+           slower-migrating profile.`;
 
     const contentEl = document.getElementById('e4-content') as HTMLElement;
     contentEl.innerHTML = `
@@ -1381,6 +1414,7 @@ function initExhibit4(): void {
           <th scope="col" data-sort="assets"   aria-sort="${ariaSort('assets')}"   tabindex="0">Exposed Assets ${sortArrow('assets')}</th>
           <th scope="col" data-sort="tb"       aria-sort="${ariaSort('tb')}"       tabindex="0">Exposed Data ${sortArrow('tb')}</th>
           <th scope="col" data-sort="pct"      aria-sort="${ariaSort('pct')}"      tabindex="0">% Exposed ${sortArrow('pct')}</th>
+          <th scope="col" data-sort="window"   aria-sort="${ariaSort('window')}"   tabindex="0">Window Past CRQC ${sortArrow('window')}</th>
           <th scope="col" data-sort="miss"     aria-sort="${ariaSort('miss')}"     tabindex="0">vs CRQC (~${CURRENT_YEAR + scenario.yearsFromNow}) ${sortArrow('miss')}</th>
         </tr></thead>
         <tbody>${rows.join('')}</tbody>
@@ -1388,7 +1422,7 @@ function initExhibit4(): void {
       </div>`;
       contentEl.innerHTML += `
       <div class="delay-insight">
-        <strong>Key Insight:</strong> Every year of delay increases the exposure window.
+        <strong>Key Insight:</strong> ${insightLead}
         Data encrypted <em>today</em> under classical algorithms may already be harvested
         by adversaries waiting for a CRQC. "Waiting to see" is a choice to accept exposure —
         not a neutral decision. The ${esc(scenario.label)} scenario puts CRQC arrival around
