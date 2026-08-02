@@ -15,8 +15,8 @@ beforeAll(async () => {
 });
 
 describe('UI smoke — app mount', () => {
-  it('renders all five exhibits without throwing', () => {
-    for (const id of ['exhibit-1', 'exhibit-2', 'exhibit-3', 'exhibit-4', 'exhibit-5']) {
+  it('renders all six exhibits without throwing', () => {
+    for (const id of ['exhibit-1', 'exhibit-2', 'exhibit-3', 'exhibit-4', 'exhibit-5', 'exhibit-6']) {
       expect(document.getElementById(id), id).not.toBeNull();
     }
   });
@@ -111,6 +111,21 @@ describe('UI smoke — Exhibit 2 organization table', () => {
   it('shows an aggregate risk score out of 100', () => {
     const score = document.querySelector('#e2-content .risk-score-stat .stat-value');
     expect(score?.textContent).toMatch(/\/100/);
+  });
+});
+
+describe('UI smoke — Exhibit 6 migration exhibit', () => {
+  it('mounts its controls and status region', () => {
+    expect(document.getElementById('e6-org')).not.toBeNull();
+    expect(document.getElementById('e6-migrate')).not.toBeNull();
+    expect(document.getElementById('e6-attack')).not.toBeNull();
+    expect(document.getElementById('e6-status')?.getAttribute('aria-live')).toBe('polite');
+  });
+
+  it('states its toy scale in the panel rather than burying it', () => {
+    const scale = document.querySelector('#exhibit-6 .e6-scale')?.textContent ?? '';
+    expect(scale).toMatch(/32-bit primes/);
+    expect(scale).toMatch(/RSA-2048 is\s+2048 bits/);
   });
 });
 

@@ -42,7 +42,7 @@ It also teaches the *mechanism* behind the accounting, not just the arithmetic: 
 
 **[systemslibrarian.github.io/crypto-lab-harvest-timeline](https://systemslibrarian.github.io/crypto-lab-harvest-timeline/)**
 
-Five interactive exhibits let you compute X+Y vs Z for a single asset, profile a whole organization's portfolio, watch year-by-year exposure curves from 2026 to 2076 across all four CRQC scenarios, run a cost-of-delay what-if table, and generate quantum-safe architecture recommendations for new systems. Results update live as you change data type, algorithm, lifetimes, and scenario.
+Six interactive exhibits let you compute X+Y vs Z for a single asset, profile a whole organization's portfolio, watch year-by-year exposure curves from 2026 to 2076 across all four CRQC scenarios, run a cost-of-delay what-if table, and generate quantum-safe architecture recommendations for new systems. Results update live as you change data type, algorithm, lifetimes, and scenario. Exhibit 6 then leaves projection behind and runs the cryptography: protect the organization's records under a real (toy) RSA-KEM, re-key what you still hold to AES-256, and let a CRQC factor the modulus for real.
 
 ## What Can Go Wrong
 
@@ -70,13 +70,13 @@ npm run dev
 
 ## Related Demos
 
-- [crypto-lab-harvest-vault](https://systemslibrarian.github.io/crypto-lab-harvest-vault/) — the HNDL concept demonstration this calculator quantifies.
+- [crypto-lab-harvest-vault](https://systemslibrarian.github.io/crypto-lab-harvest-vault/) — the HNDL concept demonstration this calculator quantifies. **The two labs share Mosca's inequality deliberately and split the work:** harvest-vault is the *threat* lab (why harvested traffic is already lost, proven by capturing a live handshake and breaking it after a PQC upgrade), and this one is the *planning* lab (which assets in a fleet cross a CRQC unprotected, what each year of delay adds, and — in Exhibit 6 — what a migration does and does not reach).
 - [crypto-lab-pq-rotation](https://systemslibrarian.github.io/crypto-lab-pq-rotation/) — hybrid key-rotation and migration planning under CNSA 2.0.
 - [crypto-lab-pq-tls-handshake](https://systemslibrarian.github.io/crypto-lab-pq-tls-handshake/) — hybrid PQ+classical TLS 1.3 handshake.
 - [crypto-lab-shor](https://systemslibrarian.github.io/crypto-lab-shor/) — what a CRQC actually does to RSA (Shor's algorithm).
 - [crypto-lab-kyber-vault](https://systemslibrarian.github.io/crypto-lab-kyber-vault/) — ML-KEM-768, a quantum-safe destination algorithm.
 
-## Five Exhibits
+## Six Exhibits
 
 Above the exhibits, a **"How the harvest works" mini-timeline** grounds *why* X + Y > Z means exposure — three color-coded steps (harvest → store → decrypt) using the same X/Y/Z palette as the inequality, before any algebra appears.
 
@@ -95,6 +95,16 @@ What-if table: what does starting migration now vs. in 1, 2, 5, or 10 years look
 ### Exhibit 5 — Personal Application
 Concrete quantum-safe architecture recommendations for new systems. Includes a worked example for a ministry app (PrayerWarriors) with asset-by-asset algorithm recommendations, cross-linked to other tools in this series.
 
+### Exhibit 6 — Migration, Executed
+The one exhibit that performs cryptography rather than projecting it (`src/rekey.ts`). The selected organization's first three assets are encrypted under a real RSA-KEM (random integer wrapped with RSA, SHA-256 of that integer as the AES-256-GCM data key), plus two 2026 "wire sessions" the adversary is holding a copy of. You then choose the order of two buttons:
+
+- **Migrate the archive to AES-256** — unwraps each record you still hold with the private key and re-encrypts it under a locally held symmetric key, discarding the RSA wrapper. Symmetric-only protection for data at rest is quantum-safe: Grover halves AES-256 to 128-bit work.
+- **CRQC arrives** — really factors the modulus with Pollard's rho, recovers the private exponent, and attempts every record. Re-keyed records are attacked too: the attacker derives a key from the recovered exponent and AES-GCM rejects it.
+
+Migrate first and it reads 2 of 5 (the two copies that already left). Skip the migration and it reads 5 of 5. Every figure in the verdict — iteration count, elapsed time, read counts, byte-identical checks — is measured from that run.
+
+**Toy scale, stated on the page:** the modulus is two 32-bit primes so rho terminates in a browser tab. RSA-2048 is 2048 bits and is not factorable this way; the exhibit stands in for what Shor's period finding does to a real modulus, which is not a search.
+
 ## Algorithm Coverage
 
 **Broken by Shor's algorithm (urgent migration needed):**  
@@ -109,9 +119,9 @@ ML-KEM-768, ML-KEM-1024 (NIST FIPS 203, 2024), ML-DSA-65, ML-DSA-87 (FIPS 204, 2
 ## Stack
 
 - **Vite** + **TypeScript strict** + **Vanilla CSS**
-- **Vitest** for unit + DOM + a11y tests (88 tests: Mosca math, exposure curves and their survey anchors / Grover-modifier invariants, aggregate risk, catalog invariants, happy-dom smoke tests that mount the UI and verify all five exhibits plus the harvest mini-timeline, jargon glosses, plain-English narration and the exposure-chart ghost line render, and a WCAG-AA contrast guard that parses the CSS palette and asserts every text color clears 4.5:1 in both light and dark themes)
+- **Vitest** for unit + DOM + a11y tests (104 tests: Mosca math, exposure curves and their survey anchors / Grover-modifier invariants, aggregate risk, catalog invariants, happy-dom smoke tests that mount the UI and verify all six exhibits plus the harvest mini-timeline, jargon glosses, plain-English narration and the exposure-chart ghost line render, a WCAG-AA contrast guard that parses the CSS palette and asserts every text color clears 4.5:1 in both light and dark themes, and Exhibit 6's cryptography — Miller-Rabin known answers, RSA key/inverse invariants, Pollard's rho recovering exactly the generated primes, and the migrate-then-attack comparison in both orders)
 - SVG for timeline visualization (no canvas dependencies)
-- No backends, no tracking, no `Math.random()` (deterministic algorithms only)
+- No backends, no tracking, no `Math.random()`. Every projection is deterministic; Exhibit 6 draws real key material from `crypto.getRandomValues`, so its keys and ciphertexts differ on every run by design
 - GitHub Pages deployment
 
 ## Accessibility & Mobile

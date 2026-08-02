@@ -493,6 +493,33 @@ input[type='range'] { flex: 1; accent-color: var(--color-today); cursor: pointer
 .app-footer { border-top: 1px solid var(--color-border); padding: 1.5rem 2rem; font-size: 0.75rem; color: var(--color-text-dim); font-family: var(--font-mono); line-height: 1.7; text-align: center; }
 .app-footer a { color: var(--color-text-muted); text-decoration: underline; }
 
+/* ── Exhibit 6 — Migration, Executed ───────────────────────────────────────── */
+.e6-intro { font-size: 0.9rem; line-height: 1.7; color: var(--color-text-muted); margin-bottom: 1rem; max-width: 88ch; }
+.e6-intro em, .e6-intro strong { color: var(--color-text); }
+.e6-scale { font-size: 0.8rem; line-height: 1.65; color: var(--color-text-muted); max-width: 88ch;
+  border-left: 3px solid var(--color-amber); background-color: var(--color-surface-2);
+  padding: 0.75rem 1rem; border-radius: 0 var(--radius-sm) var(--radius-sm) 0; margin-bottom: 1.5rem; }
+.e6-scale strong { color: var(--color-text); }
+.e6-buttons { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
+.e6-buttons .toolbar-btn[disabled] { opacity: 0.55; cursor: not-allowed; }
+.e6-status { font-family: var(--font-mono); font-size: 0.8rem; color: var(--color-text);
+  border: 1px dashed var(--color-border); border-radius: var(--radius-sm);
+  padding: 0.6rem 0.8rem; margin-bottom: 1.25rem; }
+.e6-table caption { font-family: var(--font-mono); font-size: 0.72rem; color: var(--color-text-muted);
+  text-align: left; padding: 0.5rem 0.75rem; word-break: break-all; }
+.e6-table th[scope='row'] { font-weight: 600; color: var(--color-text); text-align: left;
+  padding: 0.65rem 0.75rem; border-bottom: 1px solid var(--color-border); vertical-align: top;
+  font-family: inherit; font-size: 0.85rem; text-transform: none; letter-spacing: normal; }
+.e6-table td { vertical-align: top; }
+.e6-table small { color: var(--color-text-muted); font-size: 0.75rem; line-height: 1.5; display: inline-block; margin-top: 0.2rem; }
+.e6-bytes { font-family: var(--font-mono); font-size: 0.78rem; color: var(--color-text-muted); word-break: break-all; }
+.e6-pending { color: var(--color-text-dim); font-family: var(--font-mono); font-size: 0.78rem; }
+.e6-read { font-family: var(--font-mono); font-weight: 700; color: var(--color-danger); letter-spacing: 0.06em; }
+.e6-held { font-family: var(--font-mono); font-weight: 700; color: var(--color-safe); letter-spacing: 0.06em; }
+.e6-plain { font-family: var(--font-mono); font-size: 0.78rem; color: var(--color-text); }
+.e6-verdict.e6-good { border-left-color: var(--color-safe); }
+.e6-verdict.e6-bad { border-left-color: var(--color-danger); }
+
 /* ── Focus-visible: keyboard-nav ring for all interactive elements ─────────── */
 :focus-visible {
   outline: 2px solid var(--color-today);

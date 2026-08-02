@@ -13,6 +13,17 @@ import {
   whatIfMigrationDelay,
 } from './scenarios.ts';
 import { exposureAnchors, exposureModifier } from './risk-engine.ts';
+import {
+  attackRecord,
+  factorPollardRho,
+  generateToyRsaKey,
+  migrateToLocalAes,
+  protectWithRsaKem,
+  type AttackOutcome,
+  type FactorResult,
+  type ProtectedItem,
+  type ToyRsaKey,
+} from './rekey.ts';
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -1594,6 +1605,278 @@ function initExhibit5(): void {
     </div>`;
 }
 
+// ─── Exhibit 6 — Migration, Executed ─────────────────────────────────────────
+//
+// Exhibits 1-5 project *when* an asset crosses the line. None of them showed
+// what "migrate" does to bytes — and that gap hides the distinction planners
+// most need: re-keying fixes the data you still hold and does nothing at all
+// for the data that already left. This exhibit makes the learner do both and
+// then measures the difference under one real attack. See src/rekey.ts for the
+// cryptography and its stated scale.
+
+interface E6State {
+  key: ToyRsaKey | null;
+  items: ProtectedItem[];
+  migrated: boolean;
+  factors: FactorResult | null;
+  outcomes: Map<string, AttackOutcome> | null;
+  busy: boolean;
+  status: string;
+}
+
+const e6: E6State = {
+  key: null,
+  items: [],
+  migrated: false,
+  factors: null,
+  outcomes: null,
+  busy: false,
+  status: 'Setting up the scenario…',
+};
+
+function e6Hex(bytes: Uint8Array, n: number): string {
+  return Array.from(bytes.slice(0, n), (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+function renderExhibit6(): string {
+  const orgOptions = PRESET_ORGANIZATIONS.map(
+    (o, i) => `<option value="${i}">${esc(o.name)}</option>`
+  ).join('');
+
+  return `
+<div class="exhibit" id="exhibit-6">
+  <div class="exhibit-header">
+    <span class="exhibit-number">EXHIBIT 6</span>
+    <h3>Migration, Executed — What Re-Keying Actually Protects</h3>
+  </div>
+  <div class="exhibit-body">
+    <p class="e6-intro">Every other exhibit here projects <em>when</em> an asset crosses the line. This one runs the
+      cryptography. Your organization's records are protected with a real (tiny) RSA-KEM. Migrate them to a locally held
+      AES-256 key, then let a CRQC arrive and factor the modulus for real. The records you still hold survive it. The
+      sessions an adversary copied off the wire in 2026 do not — and no migration you perform afterwards changes that.</p>
+
+    <p class="e6-scale"><strong>Toy scale, stated plainly.</strong> The modulus here is two 32-bit primes; RSA-2048 is
+      2048 bits. It is small so Pollard's rho finishes in this tab — not an argument that RSA-2048 is weak today. It
+      stands in for what Shor's period finding does to a real modulus, which is not a search at all. The AES-256-GCM and
+      the RSA-KEM construction (SHA-256 over the recovered integer) are production shape.</p>
+
+    <div class="delay-controls">
+      <div class="field-group">
+        <label class="field-label" for="e6-org">Organization</label>
+        <select id="e6-org">${orgOptions}</select>
+      </div>
+    </div>
+
+    <div class="e6-buttons">
+      <button type="button" class="toolbar-btn" id="e6-migrate">Migrate the archive to AES-256</button>
+      <button type="button" class="toolbar-btn" id="e6-attack">CRQC arrives — factor the modulus</button>
+      <button type="button" class="toolbar-btn" id="e6-reset">Reset scenario</button>
+    </div>
+
+    <p class="e6-status" id="e6-status" role="status" aria-live="polite">${esc(e6.status)}</p>
+    <div id="e6-content"></div>
+  </div>
+</div>`;
+}
+
+function e6VerdictHtml(): string {
+  if (!e6.outcomes || !e6.factors || !e6.key) return '';
+  const rows = e6.items.map((item) => ({ item, outcome: e6.outcomes!.get(item.record.id)! }));
+  const archive = rows.filter((r) => r.item.record.holding === 'archive');
+  const captured = rows.filter((r) => r.item.record.holding === 'captured');
+  const archiveRead = archive.filter((r) => r.outcome.recovered);
+  const capturedRead = captured.filter((r) => r.outcome.recovered);
+  const exact = rows.filter((r) => r.outcome.recovered && r.outcome.plaintext === r.item.plaintext);
+
+  const took = e6.factors.elapsedMs < 1 ? 'under 1' : String(Math.round(e6.factors.elapsedMs));
+  const lines: string[] = [
+    `Factored the ${e6.key.modulusBits}-bit modulus in <strong>${e6.factors.iterations.toLocaleString('en-US')}</strong> Pollard's-rho iterations (${took} ms) and recovered the private exponent.`,
+    `Records you still hold: <strong>${archiveRead.length} of ${archive.length}</strong> read. Sessions already captured off the wire: <strong>${capturedRead.length} of ${captured.length}</strong> read.`,
+  ];
+
+  if (!e6.migrated) {
+    lines.push(
+      'Nothing was migrated before the CRQC arrived, so every record still had an RSA wrapper to break. This is the row of the cost-of-delay table you do not want to be standing on.'
+    );
+  } else if (archiveRead.length === 0 && capturedRead.length === captured.length) {
+    lines.push(
+      'The migration held for everything inside the perimeter and for nothing outside it. Same attacker, same factorization, same run — the only difference is who already had a copy.'
+    );
+  }
+  lines.push(
+    `${exact.length} recovered record(s) came back byte-identical to the original text. Re-keyed records were still attacked: the attacker derived a key from the private exponent it had just recovered, and AES-GCM rejected it.`
+  );
+
+  const good = e6.migrated && archiveRead.length === 0;
+  return `<div class="delay-insight e6-verdict ${good ? 'e6-good' : 'e6-bad'}">
+    <strong>What this run showed.</strong> ${lines.join(' ')}
+  </div>`;
+}
+
+function e6ContentHtml(): string {
+  if (e6.items.length === 0 || !e6.key) return '<p class="e6-intro">No scenario loaded.</p>';
+
+  const rows = e6.items
+    .map((item) => {
+      const outcome = e6.outcomes?.get(item.record.id);
+      const at = !outcome
+        ? '<span class="e6-pending">not attacked yet</span>'
+        : outcome.recovered
+          ? `<span class="e6-read">READ</span> <span class="e6-plain">${esc(outcome.plaintext ?? '')}</span><br><small>${esc(outcome.method)}</small>`
+          : `<span class="e6-held">NOT READ</span><br><small>${esc(outcome.method)}</small>`;
+      return `<tr>
+        <th scope="row">${esc(item.record.label)}</th>
+        <td>${item.record.holding === 'archive' ? 'Archive — you still hold it' : 'Wire — the adversary holds a copy'}</td>
+        <td>${item.record.protection === 'rsa-kem' ? `RSA-KEM (${e6.key?.modulusBits ?? 0}-bit n) + AES-256-GCM` : 'AES-256-GCM, locally held key'}</td>
+        <td class="e6-bytes">${e6Hex(item.record.ciphertext, 8)}…</td>
+        <td>${at}</td>
+      </tr>`;
+    })
+    .join('');
+
+  return `
+    <div class="table-scroll" role="region" aria-label="Protected records and what the CRQC could read" tabindex="0">
+      <table class="asset-table e6-table">
+        <caption>Modulus n = ${esc(e6.key.n.toString())} · e = 65537 · every byte below was produced in this tab</caption>
+        <thead><tr>
+          <th scope="col">Record</th>
+          <th scope="col">Where it lives</th>
+          <th scope="col">Protected by</th>
+          <th scope="col">Stored bytes</th>
+          <th scope="col">At CRQC</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    ${e6VerdictHtml()}`;
+}
+
+function e6Paint(): void {
+  const content = document.getElementById('e6-content');
+  if (content) content.innerHTML = e6ContentHtml();
+  const status = document.getElementById('e6-status');
+  if (status) status.textContent = e6.status;
+  const migrate = document.getElementById('e6-migrate') as HTMLButtonElement | null;
+  if (migrate) {
+    migrate.disabled = e6.busy || e6.migrated || e6.items.length === 0;
+    migrate.textContent = e6.migrated
+      ? 'Archive migrated to AES-256'
+      : 'Migrate the archive to AES-256';
+  }
+  const attack = document.getElementById('e6-attack') as HTMLButtonElement | null;
+  if (attack) attack.disabled = e6.busy || e6.items.length === 0;
+  const reset = document.getElementById('e6-reset') as HTMLButtonElement | null;
+  if (reset) reset.disabled = e6.busy;
+}
+
+async function e6Setup(orgIndex: number): Promise<void> {
+  if (e6.busy) return;
+  e6.busy = true;
+  e6.status = 'Generating a toy RSA key and protecting the scenario…';
+  e6Paint();
+  const org = PRESET_ORGANIZATIONS[orgIndex] ?? PRESET_ORGANIZATIONS[0];
+  const key = generateToyRsaKey();
+  const assets = org.assets.slice(0, 3);
+  const items: ProtectedItem[] = [];
+  for (let i = 0; i < assets.length; i += 1) {
+    items.push(
+      await protectWithRsaKem(
+        key,
+        `a${i}`,
+        assets[i].name,
+        'archive',
+        `${assets[i].name} — ${assets[i].dataType}, ${assets[i].dataLifetimeYears}-year shelf life`
+      )
+    );
+  }
+  for (let i = 0; i < Math.min(2, assets.length); i += 1) {
+    items.push(
+      await protectWithRsaKem(
+        key,
+        `c${i}`,
+        `2026 session: ${assets[i].name}`,
+        'captured',
+        `TLS session to ${org.name} carrying ${assets[i].name}`
+      )
+    );
+  }
+  e6.key = key;
+  e6.items = items;
+  e6.migrated = false;
+  e6.factors = null;
+  e6.outcomes = null;
+  e6.status = `${items.length} records protected under one ${key.modulusBits}-bit RSA-KEM key. Nothing has been attacked yet.`;
+  e6.busy = false;
+  e6Paint();
+}
+
+async function e6Migrate(): Promise<void> {
+  if (e6.busy || !e6.key || e6.migrated) return;
+  e6.busy = true;
+  e6.status = 'Unwrapping each record you hold and re-encrypting it under a fresh AES-256 key…';
+  e6Paint();
+  const localKey = crypto.getRandomValues(new Uint8Array(32));
+  const migrated: ProtectedItem[] = [];
+  for (const item of e6.items) {
+    // Only what you still hold can be re-keyed. The adversary's copies are not
+    // yours to touch — that is the exhibit.
+    migrated.push(
+      item.record.holding === 'archive' ? await migrateToLocalAes(item, e6.key, localKey) : item
+    );
+  }
+  e6.items = migrated;
+  e6.migrated = true;
+  e6.outcomes = null;
+  const count = migrated.filter((i) => i.record.protection === 'aes-local').length;
+  e6.status = `${count} archived record(s) re-keyed to AES-256-GCM under a key that never touched RSA. The ${migrated.length - count} already-captured session(s) were not reachable.`;
+  e6.busy = false;
+  e6Paint();
+}
+
+async function e6Attack(): Promise<void> {
+  if (e6.busy || !e6.key || e6.items.length === 0) return;
+  e6.busy = true;
+  e6.outcomes = null;
+  e6.status = 'CRQC arrives: factoring the modulus…';
+  e6Paint();
+  await new Promise((resolve) => window.setTimeout(resolve, 0));
+  const key = e6.key;
+  const factors = factorPollardRho(key.n);
+  const outcomes = new Map<string, AttackOutcome>();
+  for (const item of e6.items) {
+    outcomes.set(item.record.id, await attackRecord(item.record, key.n, key.e, factors));
+  }
+  e6.factors = factors;
+  e6.outcomes = outcomes;
+  const read = [...outcomes.values()].filter((o) => o.recovered).length;
+  e6.status = `CRQC complete: ${read} of ${e6.items.length} record(s) read.`;
+  e6.busy = false;
+  e6Paint();
+}
+
+function initExhibit6(): void {
+  const orgSel = document.getElementById('e6-org') as HTMLSelectElement | null;
+  orgSel?.addEventListener('change', () => {
+    void e6Setup(parseInt(orgSel.value, 10));
+  });
+  document.getElementById('e6-migrate')?.addEventListener('click', () => {
+    void e6Migrate();
+  });
+  document.getElementById('e6-attack')?.addEventListener('click', () => {
+    void e6Attack();
+  });
+  document.getElementById('e6-reset')?.addEventListener('click', () => {
+    void e6Setup(parseInt(orgSel?.value ?? '0', 10));
+  });
+  // WebCrypto is required for this exhibit; every other exhibit works without it.
+  if (typeof crypto !== 'undefined' && crypto.subtle) {
+    void e6Setup(parseInt(orgSel?.value ?? '0', 10));
+  } else {
+    e6.status = 'This exhibit needs WebCrypto (a secure context). The rest of the page is unaffected.';
+    e6Paint();
+  }
+}
+
 // ─── Bootstrap ────────────────────────────────────────────────────────────────
 
 function buildApp(): void {
@@ -1614,6 +1897,7 @@ function buildApp(): void {
   <a href="#exhibit-3" data-target="exhibit-3"><span class="nav-num">3</span> Exposure Curve</a>
   <a href="#exhibit-4" data-target="exhibit-4"><span class="nav-num">4</span> Cost of Delay</a>
   <a href="#exhibit-5" data-target="exhibit-5"><span class="nav-num">5</span> Personal</a>
+  <a href="#exhibit-6" data-target="exhibit-6"><span class="nav-num">6</span> Migration Executed</a>
 </nav>
 
 <main class="app-main" id="main-content" role="main">
@@ -1701,6 +1985,7 @@ function buildApp(): void {
   ${renderExhibit3()}
   ${renderExhibit4()}
   ${renderExhibit5()}
+  ${renderExhibit6()}
 </main>
 
 <footer class="app-footer">
@@ -1709,7 +1994,9 @@ function buildApp(): void {
     CRQC Estimates: GRI/evolutionQ Quantum Threat Timeline Report 2024 (Mosca &amp; Piani) ·
     NIST PQC Standards: FIPS 203/204/205 (2024) ·
     CNSA 2.0: NSA CNSS Advisory 2022 ·
-    No Math.random() — all deterministic · No backends · No tracking
+    No Math.random() — every projection is deterministic · Exhibit 6 draws real key material from
+    crypto.getRandomValues, so its keys and ciphertexts differ every run, by design ·
+    No backends · No tracking
   </p>
   <p style="margin-top:0.5rem;">
     Related demos:
@@ -1732,6 +2019,7 @@ function buildApp(): void {
   initExhibit3();
   initExhibit4();
   initExhibit5();
+  initExhibit6();
 }
 
 buildApp();
