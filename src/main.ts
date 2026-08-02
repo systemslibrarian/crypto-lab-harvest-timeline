@@ -1403,6 +1403,11 @@ function initExhibit4(): void {
     const last = byDelay[byDelay.length - 1];
     const exposureGrows = last.exposedDataTB > first.exposedDataTB;
     const windowGrows = last.windowYears > first.windowYears;
+    // "Nothing is exposed" has to be read off the rows, not inferred from the
+    // absence of growth: exposure that is already total at zero delay is flat
+    // AND maximal, and calling that "no row is exposed" contradicts a table
+    // reading 100% on every line.
+    const anyExposure = byDelay.some((r) => r.exposedDataTB > 0 || r.exposedAssets > 0);
     const insightLead = exposureGrows
       ? `Delay puts more data past the line: waiting ${last.delay} years takes exposure from
          ${first.exposedDataTB.toFixed(1)} TB to ${last.exposedDataTB.toFixed(1)} TB.`
@@ -1411,9 +1416,15 @@ function initExhibit4(): void {
            those columns cannot climb any further — what grows is the window: waiting
            ${last.delay} years finishes ${last.windowYears} years past a CRQC instead of
            ${first.windowYears}.`
-        : `For ${esc(profile.name)} under this scenario, migration beats a CRQC at every delay
-           shown, so no row is exposed and no window opens. Try a nearer CRQC scenario or a
-           slower-migrating profile.`;
+        : anyExposure
+          ? `For ${esc(profile.name)} under this scenario, exposure is already at its maximum
+             before any delay — ${first.exposedDataTB.toFixed(1)} TB across
+             ${first.exposedAssets} asset${first.exposedAssets === 1 ? '' : 's'} at zero delay,
+             unchanged at ${last.delay} years. Waiting adds no new exposure here only because
+             there is none left to add.`
+          : `For ${esc(profile.name)} under this scenario, migration beats a CRQC at every delay
+             shown, so no row is exposed and no window opens. Try a nearer CRQC scenario or a
+             slower-migrating profile.`;
 
     const contentEl = document.getElementById('e4-content') as HTMLElement;
     contentEl.innerHTML = `
