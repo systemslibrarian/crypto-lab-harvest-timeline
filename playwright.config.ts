@@ -1,6 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const PORT = 4222;
+const PORT = 4646;
 const BASE = '/crypto-lab-harvest-timeline/';
 
 export default defineConfig({
