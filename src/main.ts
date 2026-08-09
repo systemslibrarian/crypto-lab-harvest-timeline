@@ -52,6 +52,29 @@ function buildAlgoOptgroups(): string {
   ].join('');
 }
 
+/**
+ * The CRQC scenario picker, shared by exhibits 1, 2 and 4.
+ *
+ * `median` is marked selected explicitly. It used to be built without a
+ * `selected` attribute anywhere, so every one of these three menus opened on
+ * whatever `CRQC_SCENARIOS[0]` happens to be — `aggressive`, a CRQC in seven
+ * years — while every other statement of intent in this file said median:
+ * each `update()` falls back to `CRQC_SCENARIOS[1]`, exhibit 5's Mosca check is
+ * hardcoded to `CRQC_SCENARIOS[1]`, and exhibit 1's Reset button sets
+ * `median` by name. So the page loaded on the most alarming projection it
+ * models without the reader choosing it, exhibits 1 and 5 disagreed at first
+ * paint, and "Reset to defaults" moved the verdict rather than restoring it.
+ *
+ * For a page whose README is largely about not overstating what the GRI survey
+ * supports, opening on the optimistic-reading extrapolation was the wrong
+ * default to have arrived at by accident.
+ */
+function buildScenarioOptions(): string {
+  return CRQC_SCENARIOS.map(
+    (s) => `<option value="${esc(s.label)}"${s.label === 'median' ? ' selected' : ''}>${esc(s.label.charAt(0).toUpperCase() + s.label.slice(1))} (~${CURRENT_YEAR + s.yearsFromNow})</option>`
+  ).join('');
+}
+
 function riskIcon(level: string): string {
   const icons: Record<string, string> = {
     critical: '🔴', high: '🟠', medium: '🟡', low: '🟢', none: '✅',
@@ -271,9 +294,7 @@ function renderExhibit1(): string {
 
   const algoOptions = buildAlgoOptgroups();
 
-  const scenarioOptions = CRQC_SCENARIOS.map(
-    (s) => `<option value="${esc(s.label)}">${esc(s.label.charAt(0).toUpperCase() + s.label.slice(1))} (~${CURRENT_YEAR + s.yearsFromNow})</option>`
-  ).join('');
+  const scenarioOptions = buildScenarioOptions();
 
   return `
 <div class="exhibit" id="exhibit-1">
@@ -325,7 +346,14 @@ function renderExhibit1(): string {
           <span class="field-sublabel" id="e1-scenario-hint"></span>
         </div>
       </div>
-      <div class="mosca-result" id="e1-result" aria-live="polite" aria-label="Mosca inequality risk result">
+      <!-- role="status" is load-bearing, not decoration. aria-label is
+           PROHIBITED on a role-less div: the name is silently discarded, and
+           axe files that under "incomplete" rather than "violations", so a gate
+           that only asserts violations never sees it. status is also the correct
+           role for what this already declared with aria-live="polite" - a polite
+           live region that re-narrates the verdict on every slider move - and it
+           accepts an accessible name. -->
+      <div class="mosca-result" id="e1-result" role="status" aria-live="polite" aria-label="Mosca inequality risk result">
         <!-- filled dynamically -->
       </div>
     </div>
@@ -589,9 +617,7 @@ function renderExhibit2(): string {
     (o, i) => `<option value="${i}">${esc(o.name)}</option>`
   ).join('');
 
-  const scenarioOptions = CRQC_SCENARIOS.map(
-    (s) => `<option value="${esc(s.label)}">${esc(s.label.charAt(0).toUpperCase() + s.label.slice(1))} (~${CURRENT_YEAR + s.yearsFromNow})</option>`
-  ).join('');
+  const scenarioOptions = buildScenarioOptions();
 
   return `
 <div class="exhibit" id="exhibit-2">
@@ -943,11 +969,21 @@ function initExhibit2(): void {
 
 // ─── Exhibit 3: Exposure Curve Over Time ─────────────────────────────────────
 
+/**
+ * Curve hues for the exposure chart, judged against the chart's own fixed dark
+ * panel (`C_PANEL`, #141d2e) rather than against the page background.
+ *
+ * `ultra-pessimistic` was #9d4edd. `style.css` had already lightened exactly
+ * that hue to #b178e3 for its `--color-crqc` token — with the comment "lightened
+ * from #9d4edd so its small uppercase labels clear AA on dark" — but the chart
+ * kept its own copy of the old value, and the chart is where the hue is used at
+ * 9px. Measured on the panel: #9d4edd 3.67:1, #b178e3 5.36:1.
+ */
 const CURVE_COLORS: Record<string, string> = {
   aggressive:       '#ff3366',
   median:           '#ffaa00',
   pessimistic:      '#4a90e2',
-  'ultra-pessimistic': '#9d4edd',
+  'ultra-pessimistic': '#b178e3',
 };
 
 function renderExhibit3(): string {
@@ -1076,7 +1112,10 @@ function initExhibit3(): void {
     // the gap between "broken" and "merely weakened".
     const modifier = exposureModifier(algoName);
     const isGroverPartial = !!algInfo && !algInfo.broken && modifier < 1;
-    const C_GHOST = '#5e7bb0'; // muted steel-blue for the ghost reference curve
+    // Muted steel-blue for the ghost reference curve. Was #5e7bb0, which
+    // measured 3.96:1 against C_PANEL as label text (and 3.24:1 once its own
+    // `opacity: 0.85` was composited in) — both under the 4.5:1 floor. 6.59:1.
+    const C_GHOST = '#8fa3c4';
 
     // CRQC markers and curves for each scenario — collect active curves for tooltip
     const legendItems: string[] = [];
@@ -1102,7 +1141,10 @@ function initExhibit3(): void {
       // for the first active scenario, so the panel isn't cluttered.
       if (isGroverPartial && !ghostDrawn) {
         const ghost = curve.map(pt => `${xPx(pt.year)},${yPx(Math.min(1, pt.probDecryptable / modifier))}`).join(' ');
-        svgContent += `<polyline points="${ghost}" fill="none" stroke="${C_GHOST}" stroke-width="${wCurve}" stroke-dasharray="2,4" opacity="0.55"/>`;
+        // 0.55 put the composited stroke at 2.91:1 against the panel — under
+        // the 3:1 WCAG 1.4.11 floor for a graphical object the exhibit exists
+        // to show. 0.7 keeps it visibly recessive at 3.92:1.
+        svgContent += `<polyline points="${ghost}" fill="none" stroke="${C_GHOST}" stroke-width="${wCurve}" stroke-dasharray="2,4" opacity="0.7"/>`;
         ghostDrawn = true;
       }
 
@@ -1133,7 +1175,12 @@ function initExhibit3(): void {
       const crqcX = xPx(CURRENT_YEAR + scenario.yearsFromNow);
       if (crqcX >= padL && crqcX <= svgW - padR) {
         svgContent += `<line x1="${crqcX}" y1="${padT}" x2="${crqcX}" y2="${padT + chartH}" stroke="${color}" stroke-width="1.5" stroke-dasharray="4,3" opacity="0.5"/>`;
-        svgContent += `<text x="${crqcX + 3}" y="${padT + chartH - 8}" font-size="${fCrqc}" fill="${color}" opacity="0.8">${CURRENT_YEAR + scenario.yearsFromNow}</text>`;
+        // The dashed RULE is dimmed; its label is not. `opacity` on 9px text
+        // bought nothing here — the dash pattern and the hue already say
+        // "this is a marker, not data" — and it cost 0.8x of the ratio on every
+        // one of the four hues. Measured with it: aggressive 3.4:1,
+        // pessimistic 3.77:1, ultra-pessimistic 2.8:1, all against 4.5:1.
+        svgContent += `<text x="${crqcX + 3}" y="${padT + chartH - 8}" font-size="${fCrqc}" fill="${color}">${CURRENT_YEAR + scenario.yearsFromNow}</text>`;
       }
 
       // Annotation at end of line
@@ -1148,7 +1195,7 @@ function initExhibit3(): void {
     if (isGroverPartial && ghostDrawn) {
       const noteY = padT + fToday + 4;
       svgContent += `<text x="${svgW - padR - 4}" y="${noteY}" text-anchor="end" font-size="${fCrqc + 1}" fill="${C_GHOST}">Grover only halves the search — curve scaled ×${modifier}, not zeroed</text>`;
-      svgContent += `<text x="${svgW - padR - 4}" y="${noteY + fCrqc + 5}" text-anchor="end" font-size="${fCrqc}" fill="${C_GHOST}" opacity="0.85">dashed = full-strength (Shor-broken) reference</text>`;
+      svgContent += `<text x="${svgW - padR - 4}" y="${noteY + fCrqc + 5}" text-anchor="end" font-size="${fCrqc}" fill="${C_GHOST}">dashed = full-strength (Shor-broken) reference</text>`;
       legendItems.push(`<div class="legend-item"><div class="legend-dot" style="background-color:${C_GHOST}"></div><span>Full-strength reference (÷${modifier} for Grover)</span></div>`);
     }
     // Survey-anchor legend note: ringed dots = surveyed horizons, line = interpolation.
@@ -1271,9 +1318,7 @@ function renderExhibit4(): string {
     (o, i) => `<option value="${i}">${esc(o.name)}</option>`
   ).join('');
 
-  const scenarioOptions = CRQC_SCENARIOS.map(
-    (s) => `<option value="${esc(s.label)}">${esc(s.label.charAt(0).toUpperCase() + s.label.slice(1))} (~${CURRENT_YEAR + s.yearsFromNow})</option>`
-  ).join('');
+  const scenarioOptions = buildScenarioOptions();
 
   return `
 <div class="exhibit" id="exhibit-4">
@@ -1509,7 +1554,10 @@ function renderExhibit5(): string {
       Example: PrayerWarriors — Ministry App Analysis
     </h4>
 
-    <div class="table-scroll" role="region" aria-label="PrayerWarriors data asset recommendations">
+    <!-- tabindex="0": this wrapper scrolls at narrow widths and, unlike the
+         exhibit 2 and 4 tables, holds nothing focusable (no sortable headers),
+         so without it the table is unreachable by keyboard (WCAG 2.1.1). -->
+    <div class="table-scroll" role="region" aria-label="PrayerWarriors data asset recommendations" tabindex="0">
     <table class="personal-table">
       <thead><tr>
         <th scope="col">Data Asset</th>
@@ -1890,6 +1938,48 @@ function initExhibit6(): void {
 
 // ─── Bootstrap ────────────────────────────────────────────────────────────────
 
+/**
+ * Keep an OPEN jargon popover inside the viewport.
+ *
+ * `.gloss-pop` is absolutely positioned at `left: 0` against an inline trigger
+ * and is 20rem wide, so a trigger anywhere in the right-hand half of the
+ * content column opens a box that runs off the right edge of the page — a WCAG
+ * 1.4.10 reflow failure and, at 380px, a popover you cannot read the end of.
+ * The closed case is handled in CSS by taking the box out of layout entirely
+ * (see the note on `.gloss-pop`); this handles the open one.
+ *
+ * Delegated from `document`, deliberately: several exhibits re-render their
+ * glosses through `innerHTML` on every control change (exhibit 1's algorithm
+ * status is rebuilt on every keystroke of the sliders), so per-element
+ * listeners attached once at boot would be discarded within seconds of load.
+ * By the time `pointerover` or `focusin` fires, the CSS `:hover` / `:focus`
+ * state has already applied and the box has real geometry to measure.
+ */
+function initGlosses(): void {
+  const MARGIN = 8;
+  const place = (trigger: HTMLElement): void => {
+    const pop = trigger.querySelector<HTMLElement>('.gloss-pop');
+    if (!pop) return;
+    pop.style.left = '0px';
+    const anchor = trigger.getBoundingClientRect();
+    const width = pop.offsetWidth;
+    if (width === 0) return;
+    const viewport = document.documentElement.clientWidth;
+    // How far left the box must move to end before the right edge, never past
+    // the left edge — a box wider than the viewport is pinned to the left.
+    const overshoot = anchor.left + width + MARGIN - viewport;
+    const shift = Math.max(MARGIN - anchor.left, Math.min(0, -overshoot));
+    pop.style.left = `${Math.round(shift)}px`;
+  };
+  const onEnter = (event: Event): void => {
+    const target = event.target as Element | null;
+    const trigger = target?.closest?.('.gloss');
+    if (trigger) place(trigger as HTMLElement);
+  };
+  document.addEventListener('pointerover', onEnter);
+  document.addEventListener('focusin', onEnter);
+}
+
 function buildApp(): void {
   const app = document.getElementById('app');
   if (!app) return;
@@ -2023,6 +2113,7 @@ function buildApp(): void {
 </footer>`;
 
   initTheme();
+  initGlosses();
   document.getElementById('print-btn')?.addEventListener('click', () => window.print());
   initExhibitNav();
   initExhibit1();
