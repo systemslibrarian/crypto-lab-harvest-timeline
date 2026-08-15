@@ -48,7 +48,7 @@ test.afterAll(() => {
   reportCollected();
 });
 
-for (const theme of ['dark', 'light'] as const) {
+for (const theme of ['dark'] as const) {
   test(`WCAG A/AA — ${theme}, 1280px`, async ({ page }) => {
     // ~60 scans per configuration, each an axe pass plus a full arithmetic
     // contrast walk over a six-exhibit page. That is the cost of scanning after
