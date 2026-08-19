@@ -125,22 +125,6 @@ function initExhibitNav(): void {
   setActive(sections[0].id);
 }
 
-// ─── theme toggle ─────────────────────────────────────────────────────────────
-
-function initTheme(): void {
-  const btn = document.getElementById('theme-toggle');
-  if (!btn) return;
-  btn.addEventListener('click', () => {
-    const cur = document.documentElement.getAttribute('data-theme') ?? 'dark';
-    const next = cur === 'dark' ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', next);
-    localStorage.setItem('theme', next);
-    btn.textContent = next === 'dark' ? '☀ Light' : '🌙 Dark';
-  });
-  const cur = document.documentElement.getAttribute('data-theme') ?? 'dark';
-  btn.textContent = cur === 'dark' ? '☀ Light' : '🌙 Dark';
-}
-
 // ─── Jargon glosses ──────────────────────────────────────────────────────────
 //
 // The tool renders verdicts using load-bearing terms — CRQC, Shor, Grover — that
@@ -1988,7 +1972,6 @@ function buildApp(): void {
 <div class="app-header">
   <div class="header-actions">
     <button class="print-btn" id="print-btn" type="button" aria-label="Print this report">🖶 Print</button>
-    <button class="theme-toggle" id="theme-toggle" aria-label="Toggle color theme">☀ Light</button>
   </div>
 </div>
 
@@ -2112,7 +2095,6 @@ function buildApp(): void {
   </p>
 </footer>`;
 
-  initTheme();
   initGlosses();
   document.getElementById('print-btn')?.addEventListener('click', () => window.print());
   initExhibitNav();
