@@ -153,3 +153,5 @@ CI runs `npm test` and `npm run build` on every push and PR to `main`. The
 *Part of the [Crypto Lab](https://crypto-lab.systemslibrarian.dev/) suite.*
 
 *"So whether you eat or drink or whatever you do, do it all for the glory of God." — 1 Corinthians 10:31*
+
+<!-- gate-proof: throwaway PR to verify the split PR gate; not for merge -->
