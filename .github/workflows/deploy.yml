@@ -1,8 +1,33 @@
 name: Deploy to GitHub Pages
 
+# One workflow, one gate. This lab used to split them: ci.yml ran npm ci, the
+# unit suite and the type-check-and-build on pull_request, and deploy.yml ran
+# all of that PLUS the browser gate -- `npx playwright install --with-deps
+# chromium` and `npm run test:a11y`, which is a bare `playwright test` covering
+# claims.spec.ts, rekey.spec.ts and a11y.spec.ts -- but only on push to main.
+# Dependabot's auto-merge hung off ci.yml, the lighter of the two. So a bump had
+# only to satisfy the unit suite and the build to land on main, and the browser
+# gate then got its first look at that bump on the merge commit, where failing
+# blocks the publish rather than the merge. Nothing goes red in between: the PR
+# is green, the merge is clean, and main quietly stops shipping. Staleness is
+# not a state anything reports.
+#
+# That is exactly how crypto-lab-e91 drifted: a grouped minor bump floated a
+# deliberately pinned @playwright/test back up, un-deferring a WCAG defect only
+# the browser gate could see, and the live site served a build older than main
+# for twenty days.
+#
+# So the gate a bump merges against is now literally the gate the deploy runs --
+# one `build` job, depended on by both `deploy` and `dependabot-auto-merge`.
+# ci.yml is deleted rather than kept beside it: a second copy of a gate is how
+# the two drifted apart in the first place.
 on:
   push:
     branches: [main]
+  # The gate has to judge pull requests too, or auto-merge has nothing to wait on.
+  pull_request:
+    branches: [main]
+  # Required by the post-merge dispatch at the bottom of this file.
   workflow_dispatch:
 
 permissions:
@@ -11,15 +36,21 @@ permissions:
   id-token: write
 
 concurrency:
-  group: 'pages'
+  # Keyed by ref, NOT a bare `pages`. Now that pull_request is a trigger and
+  # cancel-in-progress is on, a bare group would let a PR run cancel a live main
+  # deploy -- and `cancelled` is one of the shapes that ships nothing while
+  # looking like nothing went wrong.
+  group: pages-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build-and-deploy:
+  # Everything that judges the code. This used to be fused with the deploy in a
+  # single `build-and-deploy` job, and it had to be split before the deploy could
+  # be gated: gating a fused job off for pull requests disables the PR gate
+  # itself, so the PR would run nothing and report nothing -- which looks
+  # healthier than the problem being fixed.
+  build:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v7
 
@@ -49,12 +80,90 @@ jobs:
       - name: Browser claims and accessibility gate
         run: npm run test:a11y
 
+      # configure-pages and upload-pages-artifact stay in `build`, not `deploy`.
+      # Moved down into the gated job they would run only on non-pull_request
+      # events, and the PR would stop exercising the packaging step it exercises
+      # today.
       - uses: actions/configure-pages@v6
 
       - uses: actions/upload-pages-artifact@v5
         with:
           path: dist
 
+  deploy:
+    # A pull request is gated, never published. `!= 'pull_request'` and NOT
+    # `== 'push'`: the latter reads as equivalent and also skips
+    # workflow_dispatch, which is the one trigger the post-merge dispatch below
+    # depends on -- the dispatched run would check out, build, pass the whole
+    # gate, skip this job, and leave the site exactly as stale as it was.
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    # `environment:` belongs here, not on `build`. Left on the gate job, every
+    # pull request run registers as a github-pages deployment and can sit waiting
+    # on that environment's protection rules.
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
+
+  # Dependabot only. `needs: build` is the whole safety argument, and it is the
+  # SAME build job `deploy` needs -- so a bump cannot merge unless the thing that
+  # would later block the deploy has already gone green on the PR.
+  dependabot-auto-merge:
+    needs: build
+    if: github.event_name == 'pull_request' && github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write   # required by the deploy dispatch; without it gh workflow run 403s
+    steps:
+      - id: meta
+        uses: dependabot/fetch-metadata@v3
+      # Majors included on purpose. `needs:` above already required the whole
+      # gate to pass, and that gate -- unit tests, build, axe WCAG and the e2e
+      # claims -- judges a bump far better than its version number does. A major
+      # that actually breaks this lab fails the gate and stays open for a human.
+      - name: Merge any bump whose gate went green
+        # Retry: a sibling PR merging first moves main underneath us and GitHub
+        # rejects with "Base branch was modified". That is benign, so try again
+        # rather than failing the run over a race.
+        run: |
+          for attempt in 1 2 3; do
+            if gh pr merge --squash --delete-branch "$PR_URL"; then
+              exit 0
+            fi
+            echo "merge attempt $attempt failed; base branch may have moved - retrying"
+            sleep 15
+          done
+          echo "::warning::gate passed but the merge did not land after 3 attempts;"
+          echo "::warning::leaving this PR open - Dependabot will rebase and retry."
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # A merge made with GITHUB_TOKEN raises no push event -- GitHub suppresses
+      # them so workflows cannot retrigger themselves -- so deploy would never run
+      # and the site would keep serving the previous build. Ask for it explicitly;
+      # a workflow_dispatch through the API is not suppressed. The dispatched run
+      # is the same gate-then-deploy pipeline, so a bad merge still ships nothing.
+      #
+      # The filename below has to be the one THIS repo has. It is deploy.yml here;
+      # some labs have pages.yml or deploy-pages.yml, and copying a reference lab
+      # verbatim gives a 404 that fails only on the auto-merge path, only after
+      # the merge has already landed -- the same silent non-deploy this step
+      # exists to stop.
+      - name: Deploy the merged result
+        if: success()
+        run: |
+          if gh pr view "$PR_URL" --json state --jq .state | grep -q MERGED; then
+            gh workflow run deploy.yml --repo "$GITHUB_REPOSITORY" --ref main \
+              || echo "::warning::deploy dispatch failed; run deploy.yml by hand"
+          fi
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
