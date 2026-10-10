@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   CURRENT_YEAR,
+  SURVEY_YEAR,
   CRQC_SCENARIOS,
   ALGORITHM_SECURITY,
   DATA_TYPES,
@@ -125,9 +126,9 @@ describe('computeExposureCurve', () => {
     expect(curve[50].year).toBe(CURRENT_YEAR + 50);
   });
 
-  it('probability starts at exactly 0 today', () => {
-    const curve = computeExposureCurve('RSA-2048', median, 50);
-    expect(curve[0].probDecryptable).toBe(0);
+  it('the synthetic zero is at the historical survey base, not rebased to today', () => {
+    expect(computeExposureCurve('RSA-2048', median, 50, SURVEY_YEAR)[0].probDecryptable).toBe(0);
+    expect(computeExposureCurve('RSA-2048', median, 50)[0].probDecryptable).toBeGreaterThan(0);
   });
 
   it('is monotonically non-decreasing for broken algos', () => {
@@ -301,18 +302,18 @@ describe('DATA_TYPES catalog', () => {
 describe('exposure curve teaching helpers', () => {
   it('exposureAnchors flags the three directly-surveyed points as surveyed', () => {
     const anchors = exposureAnchors(median);
-    const surveyed = anchors.filter((a) => a.surveyed).map((a) => a.yearsFromNow);
+    const surveyed = anchors.filter((a) => a.surveyed).map((a) => a.yearsFromSurvey);
     expect(surveyed).toEqual([10, 15, 20]);
     // origin and 30-year extrapolation are not survey points
-    expect(anchors.find((a) => a.yearsFromNow === 0)?.surveyed).toBe(false);
-    expect(anchors.find((a) => a.yearsFromNow === 30)?.surveyed).toBe(false);
+    expect(anchors.find((a) => a.yearsFromSurvey === 0)?.surveyed).toBe(false);
+    expect(anchors.find((a) => a.yearsFromSurvey === 30)?.surveyed).toBe(false);
   });
 
   it('surveyed anchor probs equal the scenario survey fields', () => {
     const anchors = exposureAnchors(median);
-    expect(anchors.find((a) => a.yearsFromNow === 10)?.prob).toBe(median.probabilityBy10Years);
-    expect(anchors.find((a) => a.yearsFromNow === 15)?.prob).toBe(median.probabilityBy15Years);
-    expect(anchors.find((a) => a.yearsFromNow === 20)?.prob).toBe(median.probabilityBy20Years);
+    expect(anchors.find((a) => a.yearsFromSurvey === 10)?.prob).toBe(median.probabilityBy10Years);
+    expect(anchors.find((a) => a.yearsFromSurvey === 15)?.prob).toBe(median.probabilityBy15Years);
+    expect(anchors.find((a) => a.yearsFromSurvey === 20)?.prob).toBe(median.probabilityBy20Years);
   });
 
   it('Grover-partial algorithms get the 0.5 modifier; Shor-broken get 1.0', () => {

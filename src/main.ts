@@ -1,6 +1,7 @@
 import './style.css';
 import {
   CURRENT_YEAR,
+  SURVEY_YEAR,
   ALGORITHM_SECURITY,
   DATA_TYPES,
   CRQC_SCENARIOS,
@@ -448,6 +449,7 @@ function initExhibit1(): void {
     const Z = result.moscaInequality.Z;
     const exposed = result.moscaInequality.exposed;
     const margin = result.moscaInequality.marginYears;
+    const boundary = margin === 0;
     const maxBar = Math.max(X + Y, Z, 1) * 1.1;
     const pctXY = Math.min(100, ((X + Y) / maxBar) * 100);
     const pctX  = Math.min(100, (X / maxBar) * 100);
@@ -460,11 +462,16 @@ function initExhibit1(): void {
     const dtName = dt ? esc(dt.name) : 'This data';
     const plainSentence = exposed
       ? `Your <strong>${dtName}</strong> must stay secret for <span class="hl-x">${X} yrs</span>; ` +
-        `you need <span class="hl-y">${Y} yrs</span> to migrate; a ` +
-        `<span class="gloss-inline">CRQC</span> likely arrives in <span class="hl-z">${Z} yrs</span> (${CURRENT_YEAR + Z}) — ` +
+        `you need <span class="hl-y">${Y} yrs</span> to migrate; the ` +
+        `model assumes a <span class="gloss-inline">CRQC</span> arrives in <span class="hl-z">${Z} yrs</span> (${CURRENT_YEAR + Z}) — ` +
         `so <strong>${X} + ${Y} = ${X + Y} &gt; ${Z}</strong>, and your data is exposed for <strong>${Math.abs(margin).toFixed(0)} years</strong>.`
+      : boundary
+        ? `Your <strong>${dtName}</strong> must stay secret for <span class="hl-x">${X} yrs</span>; ` +
+          `you need <span class="hl-y">${Y} yrs</span> to migrate; the model assumes a ` +
+          `<span class="gloss-inline">CRQC</span> in <span class="hl-z">${Z} yrs</span> (${CURRENT_YEAR + Z}) — ` +
+          `<strong>${X} + ${Y} = ${Z}</strong>: at the planning boundary, with no spare time; strict exposure is not established.`
       : `Your <strong>${dtName}</strong> must stay secret for <span class="hl-x">${X} yrs</span>; ` +
-        `you finish migrating in <span class="hl-y">${Y} yrs</span>; a ` +
+        `you finish migrating in <span class="hl-y">${Y} yrs</span>; the model assumes a ` +
         `<span class="gloss-inline">CRQC</span> arrives in <span class="hl-z">${Z} yrs</span> (${CURRENT_YEAR + Z}) — ` +
         `so <strong>${X} + ${Y} = ${X + Y} ≤ ${Z}</strong>, with <strong>${margin.toFixed(0)} years</strong> of margin to spare.`;
 
@@ -474,11 +481,11 @@ function initExhibit1(): void {
         <div class="row"><span class="label">X (data lifetime)</span><span class="value" style="color:var(--color-lifetime)">${X} years</span></div>
         <div class="row"><span class="label">Y (migration time)</span><span class="value" style="color:var(--color-migration)">${Y} years</span></div>
         <div class="row"><span class="label">Z (CRQC arrival)</span><span class="value" style="color:var(--color-crqc)">${Z} years (${CURRENT_YEAR + Z})</span></div>
-        <div class="row"><span class="label">X + Y</span><span class="value">${X + Y} years ${exposed ? '&gt;' : '≤'} Z = ${Z}</span></div>
+        <div class="row"><span class="label">X + Y</span><span class="value">${X + Y} years ${exposed ? '&gt;' : boundary ? '=' : '&lt;'} Z = ${Z}</span></div>
         <div class="row"><span class="label">${exposed ? 'Exposure' : 'Margin'}</span><span class="value" style="color:${exposed ? 'var(--color-critical)' : 'var(--color-safe)'}">${exposed ? '−' : '+'}${Math.abs(margin).toFixed(0)} years</span></div>
       </div>
       <div class="mosca-bar-container" role="img"
-           aria-label="X+Y of ${X + Y} years versus CRQC arrival in ${Z} years — ${exposed ? 'exposed by ' + Math.abs(margin).toFixed(0) + ' years' : 'safe with ' + margin.toFixed(0) + ' year margin'}">
+           aria-label="X+Y of ${X + Y} years versus CRQC arrival in ${Z} years — ${exposed ? 'exposed by ' + Math.abs(margin).toFixed(0) + ' years' : boundary ? 'at the planning boundary with no spare time; strict exposure is not established' : 'positive margin of ' + margin.toFixed(0) + ' years'}">
         <div class="mosca-bar-xy" style="width:${pctXYsafe}%;">
           <div class="seg-x" style="width:${(pctX / pctXYsafe) * 100}%;" title="X = ${X} years (data lifetime)"></div>
           <div class="seg-y" style="width:${(pctY / pctXYsafe) * 100}%;" title="Y = ${Y} years (migration time)"></div>
@@ -494,10 +501,12 @@ function initExhibit1(): void {
           ${exposed
             ? `Data encrypted today stays sensitive for <strong>${X} years</strong>. <br>
                You need <strong>${Y} years</strong> to migrate. <br>
-               CRQC likely in ~<strong>${Z} years</strong> (${CURRENT_YEAR + Z}). <br>
+               Modelled CRQC arrival in <strong>${Z} years</strong> (${CURRENT_YEAR + Z}). <br>
                Exposure window: <strong>${Math.abs(margin).toFixed(0)} years</strong> of potential decryption.`
+            : boundary
+              ? 'At the planning boundary: no spare time. Strict exposure is not established; this is not a safety guarantee.'
             : `Margin of <strong>${margin.toFixed(0)} years</strong> before CRQC threat arrives. <br>
-               Data lifetime + migration completed before expected CRQC.`}
+               Data lifetime + migration completed before the assumed CRQC.`}
         </div>
       </div>
       <div class="recommendation">
@@ -1000,12 +1009,18 @@ function renderExhibit3(): string {
     <div class="svg-chart-wrap" id="e3-chart"></div>
     <p class="chart-caption">
       <strong>Reading this chart:</strong> the ringed dots sit on the horizons the
-      2024 GRI/evolutionQ expert survey actually asked about (10, 15 and 20 years).
-      Each value is an <em>averaged</em> probability that a CRQC exists by that year,
+      historical 2024 GRI/evolutionQ expert survey asked about: 10, 15 and 20 years
+      from ${SURVEY_YEAR}, fixed at 2034, 2039 and 2044. The planner as-of year is ${CURRENT_YEAR}.
+      Published values are <em>averaged</em> probabilities that a CRQC exists by that year,
       not a share of experts — the report averages the experts' likelihood bands two
-      ways, giving ~19–34% at 10 years. The line between the dots is a smoothed
+      ways, giving ~19–34% at 10 years. Ringed dots identify survey horizons;
+      only the pessimistic scenario directly quotes all three published values.
+      Other scenario values are modelled midpoints or extrapolations. The line between the dots is a smoothed
       <em>interpolation</em>, not a measured forecast — treat the exact percentage
-      under the crosshair as an estimate, not a promise.
+      under the crosshair as an illustration, not a calibrated forecast or individualized
+      decryption probability. These are historical 2024 estimates; the distinct
+      <a href="https://globalriskinstitute.org/publication/quantum-threat-timeline-report-2025b/" target="_blank" rel="noopener">2025 expert survey</a>,
+      published 9 March 2026, reports newer estimates that are not used in these curves.
     </p>
     <div class="chart-legend" id="e3-legend"></div>
     <div class="exhibit-toolbar">
@@ -1148,8 +1163,8 @@ function initExhibit3(): void {
       // the smooth line is interpolation BETWEEN the anchor horizons, not a forecast.
       for (const a of exposureAnchors(scenario)) {
         if (!a.surveyed) continue;
-        if (a.yearsFromNow > horizonYears) continue;
-        const ax = xPx(CURRENT_YEAR + a.yearsFromNow);
+        if (a.year < yearStart || a.year > yearStart + horizonYears) continue;
+        const ax = xPx(a.year);
         const ay = yPx(a.prob * modifier);
         const rAnchor = compact ? 5.5 : 4;
         svgContent += `<circle cx="${ax}" cy="${ay}" r="${rAnchor}" fill="${C_PANEL}" stroke="${color}" stroke-width="2"/>`;
@@ -1202,7 +1217,7 @@ function initExhibit3(): void {
 
     const algStatusText = algInfo?.broken ? 'broken (Shor-vulnerable)' : algInfo?.longTermSafe ? 'quantum-safe' : 'partially affected';
     chartEl.innerHTML = `<svg viewBox="0 0 ${svgW} ${svgH}" style="width:100%;display:block" role="img" aria-labelledby="e3-chart-title">
-      <title id="e3-chart-title">Exposure probability curve for ${esc(algoName)} (${esc(algStatusText)}), showing probability of harvested ciphertext becoming decryptable from ${CURRENT_YEAR} to ${CURRENT_YEAR + horizonYears} across 4 CRQC scenarios</title>
+      <title id="e3-chart-title">Historical illustrative exposure probability curve for ${esc(algoName)} (${esc(algStatusText)}), showing modelled survey-based scenarios from ${CURRENT_YEAR} to ${CURRENT_YEAR + horizonYears} across 4 CRQC scenarios</title>
       ${svgContent}</svg><div class="chart-tooltip" id="e3-tooltip" role="tooltip" aria-hidden="true"></div>`;
 
     legendEl.innerHTML = legendItems.join('');
@@ -2028,7 +2043,7 @@ function buildApp(): void {
         <h3>Foundational Citations</h3>
         <ul>
           <li><strong>Mosca, M. (2018).</strong> "Cybersecurity in an era with quantum computers: will we be ready?" <em>IEEE Security &amp; Privacy</em> 16(5), 38–41.</li>
-          <li><strong>Mosca, M. &amp; Piani, M. (2024).</strong> <em>Quantum Threat Timeline Report 2024.</em> Global Risk Institute / evolutionQ. The most recent edition built on a survey of quantum-computing experts; the 2025 GRI publication of that name is an executive-interview companion report, not a new survey.</li>
+          <li><strong>Mosca, M. &amp; Piani, M. (2024).</strong> <em>Quantum Threat Timeline Report 2024.</em> Global Risk Institute / evolutionQ. Historical survey retained for this teaching scenario. The <a href="https://globalriskinstitute.org/publication/quantum-threat-timeline-report-2025b/" target="_blank" rel="noopener">2025 report</a>, published 9 March 2026, is a distinct survey of 26 experts; its executive-perspectives companion is separate.</li>
           <li><strong>Brassard, Høyer &amp; Tapp (1997).</strong> Quantum cryptanalysis of hash functions — collision resistance.</li>
           <li><strong>Gidney (2025).</strong> Sub-million-qubit RSA-2048 factoring estimate.</li>
         </ul>
@@ -2057,7 +2072,7 @@ function buildApp(): void {
           <li>Probability curves interpolate between GRI 2024 anchors (10y / 15y / 20y / 30y) with a smoothstep S-curve. The pessimistic scenario uses the report's published averages at all three surveyed horizons; the other scenarios are modelled midpoints and extrapolations around them.</li>
           <li>Quantum-safe algorithms are pinned to 0% exposure regardless of Mosca math.</li>
           <li>AES-128 is treated as effectively broken for long-lived data (64-bit post-Grover).</li>
-          <li>Reference year is hardcoded to <strong>2026</strong>, anchored to the GRI 2024 report; scenario offsets do not silently drift.</li>
+          <li>Planner as-of year is fixed at <strong>${CURRENT_YEAR}</strong>. Historical survey horizons remain anchored to <strong>${SURVEY_YEAR}</strong> (2034/2039/2044); illustrative arrival offsets are separate model assumptions. Neither date silently follows the system clock.</li>
         </ul>
       </div>
     </div>

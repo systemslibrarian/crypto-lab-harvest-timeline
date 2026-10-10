@@ -17,13 +17,17 @@ X + Y > Z  →  YOUR DATA IS ALREADY AT RISK
 
 *Citation: Michele Mosca, "Cybersecurity in an era with quantum computers: will we be ready?" IEEE Security & Privacy, 2018.*
 
-CRQC arrival probabilities use the **GRI/evolutionQ Quantum Threat Timeline Report 2024** (Mosca & Piani, December 2024) — the most recent edition built on a survey of quantum-computing experts. The survey asks each expert for a likelihood band, then averages those bands two ways: an "optimistic" reading takes the upper edge of each band, a "pessimistic" reading the lower edge. The figures below are those **averaged probabilities that a CRQC exists by each horizon** — they are not the share of experts holding a view:
+CRQC arrival probabilities use the **GRI/evolutionQ Quantum Threat Timeline Report 2024** (Mosca & Piani, December 2024) — an intentionally **historical 2024** teaching scenario, not the latest survey. The survey asks each expert for a likelihood band, then averages those bands two ways: an "optimistic" reading takes the upper edge of each band, a "pessimistic" reading the lower edge. The figures below are those **averaged probabilities that a CRQC exists by each horizon** — they are not the share of experts holding a view:
 
 | Horizon | 10-year | 15-year | 20-year |
 |---------|---------|---------|---------|
 | Averaged probability | ~19% (pessimistic) to ~34% (optimistic) | ~39% (pessimistic) | ~60% (pessimistic) |
 
 The report publishes the pessimistic reading at all three horizons but the optimistic reading only at 5 years (~14%) and 10 years (~34%), so this demo's aggressive and median scenarios extrapolate beyond 10 years rather than quoting the report. Separately, the report also counts respondents — at 15 years, 21 of 32 experts put the likelihood at about 50% or more — but that is a different statistic from the averaged probability and is not what the curves plot.
+
+Survey horizons are fixed at 2034, 2039 and 2044 (2024 + 10/15/20), independent of the fixed planner as-of year 2026. Arrival offsets used by the Mosca calculator are separate illustrative assumptions. The smooth curves and Grover modifier are models, not calibrated forecasts or individualized decryption probabilities.
+
+The [2025 expert survey](https://globalriskinstitute.org/publication/quantum-threat-timeline-report-2025b/), published 9 March 2026, surveyed 26 experts and reports newer estimates: 28–49% at ten years and 51–70% at fifteen years. Those estimates are not silently substituted into the historical curves; the executive-perspectives companion is a separate report.
 
 The simulator covers **20+ cryptographic algorithms** across **4 CRQC scenarios** (aggressive, median, pessimistic, ultra-pessimistic) and analyzes **5 realistic organizational profiles**.
 
@@ -55,9 +59,9 @@ Six interactive exhibits let you compute X+Y vs Z for a single asset, profile a 
 
 ## Real-World Usage
 
-The Mosca Inequality was formalized by Michele Mosca in "Cybersecurity in an era with quantum computers: will we be ready?" (IEEE Security & Privacy, 2018), building on his earlier work at the University of Waterloo and evolutionQ. The Global Risk Institute / evolutionQ Quantum Threat Timeline Report has been published annually since 2019; the 2024 edition (authored by Mosca and Marco Piani) is the most recent expert survey, and reports the highest averaged 5- and 10-year likelihoods the series has recorded. The 2025 GRI publication under that banner, *Quantum Threat Timeline 2025: Executive Perspectives on Barriers to Action*, is a companion report of interviews with financial-industry executives rather than a new survey of quantum-computing experts, so it carries no updated CRQC probability estimates.
+The Mosca Inequality was formalized by Michele Mosca in "Cybersecurity in an era with quantum computers: will we be ready?" (IEEE Security & Privacy, 2018), building on his earlier work at the University of Waterloo and evolutionQ. The Global Risk Institute / evolutionQ Quantum Threat Timeline Report has been published annually since 2019; this demo retains the historical 2024 edition for transparent comparison. The newer 2025 expert survey and its distinct executive-perspectives companion are linked above.
 
-The framework has been adopted by NIST, NSA (CNSA 2.0), UK NCSC, Germany BSI, ETSI, and multiple Fortune 500 cryptographic risk programs. The "Harvest-Now-Decrypt-Later" terminology itself was popularized by this risk model and now appears in NIST SP 1800-38B and related guidance documents.
+At `X + Y = Z`, the strict inequality is false, but there is no spare time. The UI and recommendation state the planning boundary rather than claiming zero-year exposure or a positive safety margin.
 
 ## How to Run Locally
 
@@ -119,7 +123,7 @@ ML-KEM-768, ML-KEM-1024 (NIST FIPS 203, 2024), ML-DSA-65, ML-DSA-87 (FIPS 204, 2
 ## Stack
 
 - **Vite** + **TypeScript strict** + **Vanilla CSS**
-- **Vitest** for unit + DOM + a11y tests (104 tests: Mosca math, exposure curves and their survey anchors / Grover-modifier invariants, aggregate risk, catalog invariants, happy-dom smoke tests that mount the UI and verify all six exhibits plus the harvest mini-timeline, jargon glosses, plain-English narration and the exposure-chart ghost line render, a WCAG-AA contrast guard that parses the CSS palette and asserts every text color clears 4.5:1 in both light and dark themes, and Exhibit 6's cryptography — Miller-Rabin known answers, RSA key/inverse invariants, Pollard's rho recovering exactly the generated primes, and the migrate-then-attack comparison in both orders)
+- **Vitest** for unit + DOM + a11y tests (109 tests: Mosca math including equality and adjacent boundaries, fixed historical survey calendar anchors across as-of years, exposure curves / explicitly heuristic Grover-modifier invariants, aggregate risk, catalog invariants, happy-dom smoke tests that mount the UI and verify all six exhibits plus the harvest mini-timeline, jargon glosses, plain-English narration and the exposure-chart ghost line render, a WCAG-AA contrast guard that parses the CSS palette and asserts every text color clears 4.5:1 in both light and dark themes, and Exhibit 6's cryptography — Miller-Rabin known answers, RSA key/inverse invariants, Pollard's rho recovering exactly the generated primes, and the migrate-then-attack comparison in both orders)
 - SVG for timeline visualization (no canvas dependencies)
 - No backends, no tracking, no `Math.random()`. Every projection is deterministic; Exhibit 6 draws real key material from `crypto.getRandomValues`, so its keys and ciphertexts differ on every run by design
 - GitHub Pages deployment
