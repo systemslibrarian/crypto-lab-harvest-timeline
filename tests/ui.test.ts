@@ -134,6 +134,8 @@ describe('UI smoke — Exhibit 3 exposure chart', () => {
     const svg = document.querySelector('#e3-chart svg');
     expect(svg).not.toBeNull();
     expect(svg?.querySelector('title')?.textContent).toMatch(/Exposure probability/i);
+    expect(svg?.querySelector('title')?.textContent).toMatch(/historical illustrative/i);
+    expect(svg?.querySelector('title')?.textContent).toMatch(/modelled survey-based scenarios/i);
   });
 
   it('draws survey anchor rings and a points-vs-line caption (honest chart)', () => {

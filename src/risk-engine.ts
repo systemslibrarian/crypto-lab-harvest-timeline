@@ -1,6 +1,7 @@
 /**
  * Core risk calculation following the Mosca Inequality.
- * All times are in years from today (2026).
+ * Mosca durations are in years from the fixed planner as-of year (2026).
+ * Probability curve horizons instead retain the historical survey base (2024).
  *
  * Mosca Inequality: X + Y > Z
  *   X = data shelf life (years data must remain secret)
@@ -11,19 +12,15 @@
  * will we be ready?" IEEE Security & Privacy, 2018.
  */
 
-/**
- * Reference year for all CRQC scenario timelines.
- *
- * CRQC_SCENARIOS.yearsFromNow (7 / 12 / 17 / 25) is calibrated against the
- * GRI/evolutionQ Quantum Threat Timeline Report 2024, whose horizons are
- * measured from its 2024 expert survey. Using new Date().getFullYear() would
- * silently shift CRQC arrival predictions every January, so we hardcode the
- * anchor and bump it deliberately when a new GRI survey ships.
- */
+/** Fixed planner as-of year, distinct from the historical survey's base year. */
 export const CURRENT_YEAR = 2026;
+/** Year-level base of the intentionally retained historical 2024 survey. */
+export const SURVEY_YEAR = 2024;
 
 /**
- * Different expert views of when CRQC arrives.
+ * Historical 2024 probability brackets and illustrative arrival assumptions.
+ * yearsFromNow is a planner assumption from CURRENT_YEAR, not a survey horizon.
+ * These are not calibrated forecasts or individualized decryption probabilities.
  *
  * The probability fields are *averaged cumulative probabilities* that a CRQC
  * exists by the given horizon — not the share of experts holding some view.
@@ -516,7 +513,9 @@ export function assessRisk(
     recommendedAction = 'plan_migration';
   } else if (riskLevel === 'high') {
     recommendation =
-      `EXPOSED by ${Math.abs(marginYears).toFixed(0)} years.` +
+      (marginYears === 0
+        ? 'At the planning boundary (X + Y = Z): no spare time; strict exposure is not established.'
+        : `EXPOSED by ${Math.abs(marginYears).toFixed(0)} years.`) +
       ' Begin PQC migration immediately. Use hybrid classical+ML-KEM-768 for new data.' +
       ' Prioritize re-encryption of high-value assets.';
     recommendedAction = 'urgent_migration';
@@ -554,7 +553,7 @@ export function assessRisk(
  * Returns array of (year, probability) pairs.
  */
 /**
- * The four survey-anchored probability points for a scenario, plus the synthetic
+ * The historical survey-anchored probability points for a scenario, plus the synthetic
  * 30-year extrapolation the curve tails off to. The 10 / 15 / 20-year horizons
  * are the ones the GRI/evolutionQ 2024 survey actually asked about; the values
  * at them are that report's averaged estimates where it publishes them and this
@@ -563,7 +562,8 @@ export function assessRisk(
  * draw the anchor horizons distinctly from the smoothed line between them.
  */
 export interface ExposureAnchor {
-  yearsFromNow: number;
+  yearsFromSurvey: number;
+  year: number;
   prob: number;
   surveyed: boolean; // true = a horizon the 2024 expert survey asked about
   label: string;
@@ -571,21 +571,24 @@ export interface ExposureAnchor {
 
 export function exposureAnchors(scenario: CRQCScenario): ExposureAnchor[] {
   return [
-    { yearsFromNow: 0,  prob: 0,                              surveyed: false, label: 'today (0%)' },
-    { yearsFromNow: 10, prob: scenario.probabilityBy10Years, surveyed: true,  label: '10-year survey estimate' },
-    { yearsFromNow: 15, prob: scenario.probabilityBy15Years, surveyed: true,  label: '15-year survey estimate' },
-    { yearsFromNow: 20, prob: scenario.probabilityBy20Years, surveyed: true,  label: '20-year survey estimate' },
-    { yearsFromNow: 30, prob: Math.min(0.99, scenario.probabilityBy20Years + 0.05), surveyed: false, label: '30-year extrapolation' },
-  ];
+    { yearsFromSurvey: 0,  prob: 0,                              surveyed: false, label: '2024 synthetic origin (0%)' },
+    { yearsFromSurvey: 10, prob: scenario.probabilityBy10Years, surveyed: true,  label: '10-year survey estimate' },
+    { yearsFromSurvey: 15, prob: scenario.probabilityBy15Years, surveyed: true,  label: '15-year survey estimate' },
+    { yearsFromSurvey: 20, prob: scenario.probabilityBy20Years, surveyed: true,  label: '20-year survey estimate' },
+    { yearsFromSurvey: 30, prob: Math.min(0.99, scenario.probabilityBy20Years + 0.05), surveyed: false, label: '30-year extrapolation' },
+  ].map(anchor => ({ ...anchor, year: SURVEY_YEAR + anchor.yearsFromSurvey }));
 }
 
 /**
  * The Grover "partial" modifier. Algorithms that are only *weakened* by Grover
  * (AES-128) rather than *broken* by Shor never reach the full harvested-and-
- * decryptable probability — Grover halves the effective search, it does not
+ * decryptable probability in this model — Grover reduces idealized search
+ * complexity, it does not
  * hand the adversary the key outright. We scale the reported CRQC probability by
  * this factor so a symmetric cipher's exposure curve sits below a public-key
- * algorithm's. Returns 1.0 for Shor-broken algorithms (full exposure).
+ * algorithm's. This 0.5 scaling is an illustrative heuristic, not a probability
+ * derived from Grover or an individualized security estimate. Returns 1.0 for
+ * Shor-broken algorithms in this model.
  */
 export const GROVER_PARTIAL_MODIFIER = 0.5;
 
@@ -599,13 +602,14 @@ export function computeExposureCurve(
   algorithm: string,
   scenario: CRQCScenario,
   horizonYears: number = 50,
+  asOfYear: number = CURRENT_YEAR,
 ): Array<{ year: number; probDecryptable: number }> {
   const algInfo = getAlgorithmSecurity(algorithm);
 
   // Quantum-safe: negligible probability
   if (algInfo && !algInfo.broken && algInfo.longTermSafe) {
     return Array.from({ length: horizonYears + 1 }, (_, i) => ({
-      year: CURRENT_YEAR + i,
+      year: asOfYear + i,
       probDecryptable: 0,
     }));
   }
@@ -615,36 +619,37 @@ export function computeExposureCurve(
   // We interpolate with a smoothstep S-curve between anchors.
   const anchors = exposureAnchors(scenario);
 
-  // Partially-broken algorithms (AES-128) have half the risk due to reduced quantum advantage
+  // Illustrative 0.5 modifier for AES-128; not a calibrated attack probability.
   const modifier = exposureModifier(algorithm);
 
   const result: Array<{ year: number; probDecryptable: number }> = [];
   let lastProb = 0;
 
   for (let i = 0; i <= horizonYears; i++) {
-    const yearsFromNow = i;
-    let prob = interpolateAnchors(anchors, yearsFromNow) * modifier;
+    const yearsFromSurvey = asOfYear + i - SURVEY_YEAR;
+    let prob = interpolateAnchors(anchors, yearsFromSurvey) * modifier;
     // Ensure monotonically increasing
     prob = Math.max(prob, lastProb);
     prob = Math.min(prob, 1);
     lastProb = prob;
-    result.push({ year: CURRENT_YEAR + i, probDecryptable: prob });
+    result.push({ year: asOfYear + i, probDecryptable: prob });
   }
 
   return result;
 }
 
 function interpolateAnchors(
-  anchors: Array<{ yearsFromNow: number; prob: number }>,
+  anchors: Array<{ yearsFromSurvey: number; prob: number }>,
   t: number,
 ): number {
+  if (t <= anchors[0].yearsFromSurvey) return anchors[0].prob;
   // Find surrounding anchors
   for (let i = 0; i < anchors.length - 1; i++) {
     const a = anchors[i];
     const b = anchors[i + 1];
-    if (t >= a.yearsFromNow && t <= b.yearsFromNow) {
-      const span = b.yearsFromNow - a.yearsFromNow;
-      const frac = (t - a.yearsFromNow) / span;
+    if (t >= a.yearsFromSurvey && t <= b.yearsFromSurvey) {
+      const span = b.yearsFromSurvey - a.yearsFromSurvey;
+      const frac = (t - a.yearsFromSurvey) / span;
       // Smooth step (cubic) for S-curve feel
       const smooth = frac * frac * (3 - 2 * frac);
       return a.prob + smooth * (b.prob - a.prob);
