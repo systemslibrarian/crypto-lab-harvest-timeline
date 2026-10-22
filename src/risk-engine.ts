@@ -236,7 +236,7 @@ export const ALGORITHM_SECURITY: AlgorithmQuantumSecurity[] = [
     quantumStrength: 64,
     broken: false,
     longTermSafe: false,
-    notes: "Grover halves bit-strength to 64 bits; weak for long-term",
+    notes: 'Idealized Grover query count is 2^64, but practical attack cost is higher; NIST currently permits AES-128',
   },
   {
     algorithm: 'AES-256',
@@ -481,6 +481,10 @@ function computeRiskLevel(
   Y: number,
   Z: number,
 ): RiskAssessment['riskLevel'] {
+  // NIST's PQC FAQ says the idealized Grover query bound does not establish a
+  // practical AES-128 break or a quantum-driven requirement to replace it.
+  // Do not apply a Shor/CRQC arrival clock to this symmetric key-search case.
+  if (algInfo?.algorithm === 'AES-128') return 'none';
   // Quantum-safe algorithms: no risk regardless of lifetimes
   if (algInfo && !algInfo.broken && algInfo.longTermSafe) {
     return 'none';
@@ -532,8 +536,9 @@ export function assessRisk(
   let recommendedAction: RiskAssessment['recommendedAction'];
 
   if (riskLevel === 'none') {
-    recommendation =
-      'Algorithm is quantum-safe. Continue monitoring NIST PQC standards for updates.';
+    recommendation = algInfo.algorithm === 'AES-128'
+      ? 'NIST currently permits AES-128. The idealized Grover query bound is not a practical decryption forecast; do not replace AES-128 solely because of this CRQC timeline. Monitor NIST guidance.'
+      : 'No retrospective decryption risk is modeled for this mechanism under the stated assumptions. Continue monitoring NIST PQC guidance.';
     recommendedAction = 'monitor';
   } else if (riskLevel === 'low') {
     recommendation =
@@ -578,8 +583,10 @@ export function assessRisk(
 }
 
 /**
- * Compute year-by-year probability that data encrypted today
- * becomes decryptable.
+ * Compute a year-by-year illustrative decryption curve for vulnerable public-key
+ * establishment. For AES-128 this is a hypothetical teaching overlay only:
+ * its 0.5 scaling does not estimate an AES key-search attack, despite the
+ * shared `probDecryptable` interface used by the chart.
  *
  * For broken algorithms: follows S-curve growth from known probability anchors.
  * For quantum-safe: constant ~0%.

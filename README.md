@@ -11,6 +11,8 @@ The HNDL calculators and exposure chart accept **confidentiality paths** only: a
 
 The preset portfolios are illustrative confidentiality configurations: `ECDH + AES-256` means their encryption keys came through classical elliptic-curve key agreement, `RSA + AES-256` assumes the RSA key transports the AES key, and AES-256 alone models a separately managed symmetric key. Their certificate or code-signing mechanisms are independent inventory items, not a cause of the displayed TB decryption. Migration advice for those signatures belongs to a separate authenticity plan.
 
+**AES is a different quantum question.** Grover's square-root query bound gives an idealized `2^64` search for AES-128 and `2^128` for AES-256, but says little about the resources and sequential depth of an actual attack. [NIST's PQC FAQ, “should we double the key length for AES?” (question added 18 November 2018; page updated 5 August 2026)](https://csrc.nist.gov/Projects/post-quantum-cryptography/faqs) says current AES-128/192/256 may continue and AES-128 is likely secure for decades under its stated assumptions. The calculator therefore does not classify AES-128 as a harvest-now-decrypt-later break or prescribe an AES-only migration. Its chart retains a clearly labeled *hypothetical* 0.5 probability scaling as a visual teaching exercise; that factor is not derived from Grover or NIST and is not a forecast of AES ciphertext recovery.
+
 ```
 X + Y > Z  →  YOUR DATA IS ALREADY AT RISK
 
@@ -35,7 +37,7 @@ The [2025 expert survey](https://globalriskinstitute.org/publication/quantum-thr
 
 The simulator covers **20+ cryptographic algorithms** across **4 CRQC scenarios** (aggressive, median, pessimistic, ultra-pessimistic) and analyzes **5 realistic organizational profiles**.
 
-It also teaches the *mechanism* behind the accounting, not just the arithmetic: a **"How the harvest works" mini-timeline** shows ciphertext being copied today, stored for years, and decrypted once a CRQC arrives (so "your data is already at risk" is a mechanism, not a slogan); the load-bearing terms **CRQC**, **Shor's algorithm**, and **Grover's algorithm** carry inline hover/focus glosses wherever they first appear (cross-linked to the dedicated Shor and Grover demos); the exposure-probability chart draws the **surveyed 2024 anchor horizons** as ringed dots distinct from the smoothed interpolation between them; and selecting a Grover-only cipher (AES-128) overlays a **faint full-strength reference curve** so the 0.5 "weakened, not broken" modifier is visible rather than silent.
+It also teaches the *mechanism* behind the accounting, not just the arithmetic: a **"How the harvest works" mini-timeline** shows ciphertext being copied today, stored for years, and potentially decrypted after a CRQC breaks the recorded classical key establishment; the terms **CRQC**, **Shor's algorithm**, and **Grover's algorithm** carry inline hover/focus glosses; the exposure chart distinguishes surveyed 2024 anchor horizons from smoothed interpolation. Selecting AES-128 overlays an **unscaled reference curve** to make the chart's arbitrary 0.5 teaching multiplier visible, with an explicit warning that it is not a Grover-derived decryption probability.
 
 ## When to Use It
 
@@ -95,7 +97,7 @@ Interactive single-asset Mosca Inequality calculator. Choose a data type, algori
 Multi-asset dashboard for 5 preset organizations (small medical clinic, mid-size bank, government intelligence agency, tech startup, research university). Shows per-asset confidentiality risk, aggregate TB exposure, and priority migration order. It does not count signature-only vulnerabilities as decryptable TB.
 
 ### Exhibit 3 — Exposure Curve Over Time
-SVG year-by-year decryption exposure illustration (2026–2076) for confidentiality mechanisms. Overlays all 4 CRQC scenarios. Switch algorithms to see how curves shift. Quantum-safe mechanisms (ML-KEM-768, etc.) hold flat at 0% in this model. The **surveyed 2024 anchor horizons** are drawn as ringed dots (line between them is smoothed interpolation, captioned as such — not a forecast), and Grover-only ciphers overlay a **dashed full-strength reference curve** so the 0.5 modifier is visible. The curve does not predict signature forgery.
+SVG year-by-year decryption exposure illustration (2026–2076) for confidentiality mechanisms. Overlays all 4 CRQC scenarios. Switch algorithms to see how curves shift. ML-KEM choices hold flat at 0% in this model. The **surveyed 2024 anchor horizons** are drawn as ringed dots (line between them is smoothed interpolation, captioned as such — not a forecast). AES-128 alone overlays a **dashed unscaled reference curve** for a hypothetical 0.5 multiplier; its nonzero line is not a practical AES decryption probability and does not override current NIST guidance. The chart does not predict signature forgery.
 
 ### Exhibit 4 — Cost of Delay
 What-if table: what does starting migration now vs. in 1, 2, 5, or 10 years look like? Shows exposed assets, exposed TB, and whether you beat or miss the CRQC arrival window.
@@ -119,7 +121,7 @@ Migrate first and it reads 2 of 5 (the two copies that already left). Skip the m
 RSA-2048/4096 **when used for key transport or encryption**, X25519 ECDH, `ECDH + AES-256`, and `RSA + AES-256` when RSA transports the AES key. AES-256 does not rescue a session key derived from vulnerable RSA/ECDH public values recorded with the ciphertext.
 
 **Symmetric confidentiality paths in the calculator:**
-AES-128 (illustrative 64-bit idealized Grover key-search work) and AES-256 (128-bit idealized key-search work). SHA-256/SHA-384 hash functions have separate preimage/collision properties and are not encryption choices.
+AES-128 (idealized Grover query exponent 64; current NIST use still allowed) and AES-256 (idealized exponent 128). These exponents are not real-world attack costs or decryption probabilities. SHA-256/SHA-384 hash functions have separate preimage/collision properties and are not encryption choices.
 
 **Post-quantum confidentiality choices in the calculator:**
 ML-KEM-768 and ML-KEM-1024 (NIST FIPS 203, 2024), used to establish a key for symmetric encryption.
@@ -129,7 +131,7 @@ ML-KEM-768 and ML-KEM-1024 (NIST FIPS 203, 2024), used to establish a key for sy
 ## Stack
 
 - **Vite** + **TypeScript strict** + **Vanilla CSS**
-- **Vitest** for unit + DOM + a11y tests (109 tests: Mosca math including equality and adjacent boundaries, fixed historical survey calendar anchors across as-of years, exposure curves / explicitly heuristic Grover-modifier invariants, aggregate risk, catalog invariants, happy-dom smoke tests that mount the UI and verify all six exhibits plus the harvest mini-timeline, jargon glosses, plain-English narration and the exposure-chart ghost line render, a WCAG-AA contrast guard that parses the CSS palette and asserts every text color clears 4.5:1 in both light and dark themes, and Exhibit 6's cryptography — Miller-Rabin known answers, RSA key/inverse invariants, Pollard's rho recovering exactly the generated primes, and the migrate-then-attack comparison in both orders)
+- **Vitest** for unit + DOM + a11y tests (Mosca math including equality and adjacent boundaries, fixed historical survey calendar anchors across as-of years, exposure curves / explicitly heuristic Grover-modifier invariants, aggregate risk, catalog invariants, happy-dom smoke tests that mount the UI and verify all six exhibits plus the harvest mini-timeline, jargon glosses, plain-English narration and the exposure-chart ghost line render, a WCAG-AA contrast guard that parses the CSS palette and asserts every text color clears 4.5:1 in both light and dark themes, and Exhibit 6's cryptography — Miller-Rabin known answers, RSA key/inverse invariants, Pollard's rho recovering exactly the generated primes, and the migrate-then-attack comparison in both orders)
 - SVG for timeline visualization (no canvas dependencies)
 - No backends, no tracking, no `Math.random()`. Every projection is deterministic; Exhibit 6 draws real key material from `crypto.getRandomValues`, so its keys and ciphertexts differ on every run by design
 - GitHub Pages deployment

@@ -112,18 +112,21 @@ describe('assessRisk — risk level grading', () => {
     expect(r.riskLevel).toBe('none');
   });
 
-  it('AES-128 (only 64-bit post-Grover) grades risky for long-lived data', () => {
-    // 64-bit quantum security is too weak to count as "longTermSafe", so the
-    // engine treats AES-128 as effectively broken once exposure exceeds margin.
-    const r = assessRisk('test', 'AES-128', 30, 5, median);
-    expect(['medium', 'high', 'critical']).toContain(r.riskLevel);
+  it('does not turn AES-128 idealized query counts into a decryption verdict', () => {
+    const r = assessRisk('test', 'AES-128', 80, 10, median);
+    expect(r.moscaInequality.exposed).toBe(true); // timing arithmetic alone
+    expect(r.riskLevel).toBe('none');
+    expect(r.recommendedAction).toBe('monitor');
+    expect(r.recommendation).toMatch(/NIST currently permits AES-128/);
   });
 
-  it('AES-128 with comfortable margin (ultra-pess) grades safer than under median', () => {
-    const rUltra = assessRisk('test', 'AES-128', 5, 2, ultraPess);
-    const rMed   = assessRisk('test', 'AES-128', 30, 5, median);
-    const order = { none: 0, low: 1, medium: 2, high: 3, critical: 4 };
-    expect(order[rUltra.riskLevel]).toBeLessThanOrEqual(order[rMed.riskLevel]);
+  it('does not count AES-128 holdings as decryptable TB in the CRQC profile', () => {
+    const result = aggregateOrgRisk(
+      [{ name: 'symmetric archive', algorithm: 'AES-128', X: 80, Y: 10, dataSizeTB: 120 }],
+      median,
+    );
+    expect(result.exposedDataTB).toBe(0);
+    expect(result.immediateActionRequired).toBe(false);
   });
 });
 

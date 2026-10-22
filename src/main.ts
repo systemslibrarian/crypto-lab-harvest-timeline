@@ -168,10 +168,10 @@ const GLOSSES: Record<string, Gloss> = {
     term: "Grover's algorithm",
     full: "Grover's algorithm (1996)",
     body:
-      'A quantum search that finds a secret among N possibilities in about √N steps instead of N. ' +
-      'Against a symmetric key it only *halves* the effective bit-strength (AES-256 → 128-bit, ' +
-      'AES-128 → 64-bit). It weakens, it does not break — so AES-256 stays safe while AES-128 ' +
-      'becomes too weak for long-lived data.',
+      'An ideal quantum search uses about √N sequential queries instead of N, giving ' +
+      '2^64 queries for AES-128 and 2^128 for AES-256 in the abstract model. ' +
+      'Real quantum hardware and parallel attack costs matter: NIST says AES-128 ' +
+      'may continue and this query count is not a practical break.',
     href: 'https://systemslibrarian.github.io/crypto-lab-grover/',
     hrefLabel: 'See Grover in action',
   },
@@ -436,6 +436,9 @@ function initExhibit1(): void {
       if (algInfo.broken) {
         statusEl.className = 'algo-status broken';
         statusEl.innerHTML = `⚠ BROKEN by ${gloss('shor')}: ${esc(algInfo.notes)}`;
+      } else if (algoName === 'AES-128') {
+        statusEl.className = 'algo-status safe';
+        statusEl.innerHTML = `✓ CURRENTLY PERMITTED (idealized ${gloss('grover')} speedup): ${esc(algInfo.notes)}`;
       } else if (algInfo.longTermSafe) {
         statusEl.className = 'algo-status safe';
         const g = algInfo.quantumStrength < algInfo.classicalStrength ? ` (weathers ${gloss('grover')})` : '';
@@ -457,7 +460,9 @@ function initExhibit1(): void {
     const X = result.moscaInequality.X;
     const Y = result.moscaInequality.Y;
     const Z = result.moscaInequality.Z;
-    const exposed = result.moscaInequality.exposed;
+    const inequalityCrossed = result.moscaInequality.exposed;
+    const noModeledDecryption = result.riskLevel === 'none';
+    const exposed = inequalityCrossed && !noModeledDecryption;
     const margin = result.moscaInequality.marginYears;
     const boundary = margin === 0;
     const maxBar = Math.max(X + Y, Z, 1) * 1.1;
@@ -470,7 +475,13 @@ function initExhibit1(): void {
     // LOW: a live plain-English sentence that re-narrates cause-and-effect on
     // every slider move — the primary, human-readable output above the algebra.
     const dtName = dt ? esc(dt.name) : 'This data';
-    const plainSentence = exposed
+    const plainSentence = noModeledDecryption
+      ? `Your <strong>${dtName}</strong> must stay secret for <span class="hl-x">${X} yrs</span>; ` +
+        `migration takes <span class="hl-y">${Y} yrs</span>; the model assumes a CRQC in ` +
+        `<span class="hl-z">${Z} yrs</span> (${CURRENT_YEAR + Z}). ` +
+        `The timing comparison <strong>${X} + ${Y} ${inequalityCrossed ? '&gt;' : boundary ? '=' : '&lt;'} ${Z}</strong> ` +
+        `does not by itself establish decryption risk for ${esc(algoName)}.`
+      : exposed
       ? `Your <strong>${dtName}</strong> must stay secret for <span class="hl-x">${X} yrs</span>; ` +
         `you need <span class="hl-y">${Y} yrs</span> to migrate; the ` +
         `model assumes a <span class="gloss-inline">CRQC</span> arrives in <span class="hl-z">${Z} yrs</span> (${CURRENT_YEAR + Z}) — ` +
@@ -491,11 +502,11 @@ function initExhibit1(): void {
         <div class="row"><span class="label">X (data lifetime)</span><span class="value" style="color:var(--color-lifetime)">${X} years</span></div>
         <div class="row"><span class="label">Y (migration time)</span><span class="value" style="color:var(--color-migration)">${Y} years</span></div>
         <div class="row"><span class="label">Z (CRQC arrival)</span><span class="value" style="color:var(--color-crqc)">${Z} years (${CURRENT_YEAR + Z})</span></div>
-        <div class="row"><span class="label">X + Y</span><span class="value">${X + Y} years ${exposed ? '&gt;' : boundary ? '=' : '&lt;'} Z = ${Z}</span></div>
-        <div class="row"><span class="label">${exposed ? 'Exposure' : 'Margin'}</span><span class="value" style="color:${exposed ? 'var(--color-critical)' : 'var(--color-safe)'}">${exposed ? '−' : '+'}${Math.abs(margin).toFixed(0)} years</span></div>
+        <div class="row"><span class="label">X + Y</span><span class="value">${X + Y} years ${inequalityCrossed ? '&gt;' : boundary ? '=' : '&lt;'} Z = ${Z}</span></div>
+        <div class="row"><span class="label">${noModeledDecryption ? 'Decryption exposure' : exposed ? 'Exposure' : 'Margin'}</span><span class="value" style="color:${exposed ? 'var(--color-critical)' : 'var(--color-safe)'}">${noModeledDecryption ? 'Not established by this timing' : `${exposed ? '−' : '+'}${Math.abs(margin).toFixed(0)} years`}</span></div>
       </div>
       <div class="mosca-bar-container" role="img"
-           aria-label="X+Y of ${X + Y} years versus CRQC arrival in ${Z} years — ${exposed ? 'exposed by ' + Math.abs(margin).toFixed(0) + ' years' : boundary ? 'at the planning boundary with no spare time; strict exposure is not established' : 'positive margin of ' + margin.toFixed(0) + ' years'}">
+           aria-label="X+Y of ${X + Y} years versus CRQC arrival in ${Z} years — ${noModeledDecryption ? 'timing does not establish decryption exposure for this choice' : exposed ? 'exposed by ' + Math.abs(margin).toFixed(0) + ' years' : boundary ? 'at the planning boundary with no spare time; strict exposure is not established' : 'positive margin of ' + margin.toFixed(0) + ' years'}">
         <div class="mosca-bar-xy" style="width:${pctXYsafe}%;">
           <div class="seg-x" style="width:${(pctX / pctXYsafe) * 100}%;" title="X = ${X} years (data lifetime)"></div>
           <div class="seg-y" style="width:${(pctY / pctXYsafe) * 100}%;" title="Y = ${Y} years (migration time)"></div>
@@ -508,7 +519,11 @@ function initExhibit1(): void {
       <div class="result-verdict ${result.riskLevel}">
         <div class="verdict-level">${riskIcon(result.riskLevel)} RISK: ${result.riskLevel.toUpperCase()}</div>
         <div class="verdict-detail">
-          ${exposed
+          ${noModeledDecryption
+            ? algoName === 'AES-128'
+              ? 'NIST currently permits AES-128. The idealized Grover query bound is not a measured or forecast decryption attack; this CRQC arrival clock alone does not justify replacing AES-128.'
+              : 'The chosen protection does not have a modeled retrospective decryption break from this CRQC arrival clock. Keep monitoring its assumptions and implementation.'
+            : exposed
             ? `Data encrypted today stays sensitive for <strong>${X} years</strong>. <br>
                You need <strong>${Y} years</strong> to migrate. <br>
                Modelled CRQC arrival in <strong>${Z} years</strong> (${CURRENT_YEAR + Z}). <br>
@@ -1021,6 +1036,10 @@ function renderExhibit3(): string {
     <p class="chart-caption">
       This chart models <strong>retrospective decryption</strong> for confidentiality paths only.
       It does not predict when an old signature could be forged.
+      For AES-128, the nonzero line is only a hypothetical 0.5 scaling exercise, not a measured
+      AES decryption probability or a reason to migrate from AES-128 solely for quantum risk.
+      <a href="https://csrc.nist.gov/Projects/post-quantum-cryptography/faqs" target="_blank" rel="noopener">NIST PQC FAQ, AES question (added 18 November 2018; page updated 5 August 2026)</a>
+      explains why the idealized Grover query count need not translate to a practical attack.
       <strong>Reading this chart:</strong> the ringed dots sit on the horizons the
       historical 2024 GRI/evolutionQ expert survey asked about: 10, 15 and 20 years
       from ${SURVEY_YEAR}, fixed at 2034, 2039 and 2044. The planner as-of year is ${CURRENT_YEAR}.
@@ -1117,11 +1136,10 @@ function initExhibit3(): void {
     svgContent += `<text x="${todayX + 4}" y="${padT + fToday + 4}" font-size="${fToday}" fill="${C_TODAY}">Today</text>`;
 
     const algInfo = ALGORITHM_SECURITY.find(a => a.algorithm === algoName);
-    // A Grover-only algorithm (AES-128/256) is *weakened*, not broken: its curve
-    // is the full Shor curve scaled by the 0.5 modifier. Make that scaling visible
-    // — otherwise the halving is an invisible constant. We overlay a faint "ghost"
-    // of the un-scaled (full-strength, Shor-broken) curve so the learner can SEE
-    // the gap between "broken" and "merely weakened".
+    // The AES-128 curve is a deliberately hypothetical 0.5 scaling of the
+    // public-key CRQC model, not a real-world AES decryption probability.
+    // The dashed reference visualizes this pedagogical multiplier; it must not
+    // be confused with Grover's separate square-root query complexity.
     const modifier = exposureModifier(algoName);
     const isGroverPartial = !!algInfo && !algInfo.broken && modifier < 1;
     // Muted steel-blue for the ghost reference curve. Was #5e7bb0, which
@@ -1206,9 +1224,9 @@ function initExhibit3(): void {
     // Ghost-curve annotation (only when a Grover-partial algorithm is selected)
     if (isGroverPartial && ghostDrawn) {
       const noteY = padT + fToday + 4;
-      svgContent += `<text x="${svgW - padR - 4}" y="${noteY}" text-anchor="end" font-size="${fCrqc + 1}" fill="${C_GHOST}">Grover only halves the search — curve scaled ×${modifier}, not zeroed</text>`;
-      svgContent += `<text x="${svgW - padR - 4}" y="${noteY + fCrqc + 5}" text-anchor="end" font-size="${fCrqc}" fill="${C_GHOST}">dashed = full-strength (Shor-broken) reference</text>`;
-      legendItems.push(`<div class="legend-item"><div class="legend-dot" style="background-color:${C_GHOST}"></div><span>Full-strength reference (÷${modifier} for Grover)</span></div>`);
+      svgContent += `<text x="${svgW - padR - 4}" y="${noteY}" text-anchor="end" font-size="${fCrqc + 1}" fill="${C_GHOST}">Grover halves idealized key-search bits; curve ×${modifier} is illustrative</text>`;
+      svgContent += `<text x="${svgW - padR - 4}" y="${noteY + fCrqc + 5}" text-anchor="end" font-size="${fCrqc}" fill="${C_GHOST}">dashed = unscaled model reference</text>`;
+      legendItems.push(`<div class="legend-item"><div class="legend-dot" style="background-color:${C_GHOST}"></div><span>Unscaled hypothetical reference (×${modifier} is illustrative)</span></div>`);
     }
     // Survey-anchor legend note: ringed dots = surveyed horizons, line = interpolation.
     legendItems.push(`<div class="legend-item"><div class="legend-dot" style="background:${C_PANEL};border:2px solid ${C_LABEL}"></div><span>Ringed dots = 2024 expert-survey horizons · line = smoothed estimate between them</span></div>`);
@@ -1218,9 +1236,11 @@ function initExhibit3(): void {
 
     // Fixed (bright) status hues to match the always-dark panel.
     const titleColor = algInfo?.broken ? '#ff6a8e' : algInfo?.longTermSafe ? '#00ff88' : '#ffaa00';
-    const titleText = compact
-      ? `${algoName} — decryptability over time`
-      : `${algoName} — probability that harvested ciphertext becomes decryptable`;
+    const titleText = algoName === 'AES-128'
+      ? 'AES-128 — hypothetical scaling, not a decryption forecast'
+      : compact
+        ? `${algoName} — decryptability over time`
+        : `${algoName} — probability that harvested ciphertext becomes decryptable`;
     svgContent += `<text x="${padL + chartW / 2}" y="${svgH - 5}" text-anchor="middle" font-size="${fTitle}" fill="${titleColor}">${titleText}</text>`;
 
     // Crosshair (hidden by default) + dot group + transparent overlay for pointer events
@@ -1228,9 +1248,9 @@ function initExhibit3(): void {
     svgContent += `<g id="e3-crosshair-dots" opacity="0" pointer-events="none"></g>`;
     svgContent += `<rect id="e3-overlay" x="${padL}" y="${padT}" width="${chartW}" height="${chartH}" fill="transparent" style="cursor:crosshair"/>`;
 
-    const algStatusText = algInfo?.broken ? 'broken (Shor-vulnerable)' : algInfo?.longTermSafe ? 'quantum-safe' : 'partially affected';
+    const algStatusText = algoName === 'AES-128' ? 'current NIST use permitted; hypothetical scaling' : algInfo?.broken ? 'broken (Shor-vulnerable)' : algInfo?.longTermSafe ? 'quantum-safe' : 'partially affected';
     chartEl.innerHTML = `<svg viewBox="0 0 ${svgW} ${svgH}" style="width:100%;display:block" role="img" aria-labelledby="e3-chart-title">
-      <title id="e3-chart-title">Historical illustrative exposure probability curve for ${esc(algoName)} (${esc(algStatusText)}), showing modelled survey-based scenarios from ${CURRENT_YEAR} to ${CURRENT_YEAR + horizonYears} across 4 CRQC scenarios</title>
+      <title id="e3-chart-title">${algoName === 'AES-128' ? 'Hypothetical 0.5 scaling exercise, not an AES decryption probability' : 'Historical illustrative exposure probability curve'} for ${esc(algoName)} (${esc(algStatusText)}), showing modelled survey-based scenarios from ${CURRENT_YEAR} to ${CURRENT_YEAR + horizonYears} across 4 CRQC scenarios</title>
       ${svgContent}</svg><div class="chart-tooltip" id="e3-tooltip" role="tooltip" aria-hidden="true"></div>`;
 
     legendEl.innerHTML = legendItems.join('');
@@ -1271,7 +1291,7 @@ function initExhibit3(): void {
       dotGroup.setAttribute('opacity', activeCurves.length > 0 ? '1' : '0');
 
       const yearsFromNow = year - CURRENT_YEAR;
-      tooltip.innerHTML = `<div class="tt-year">${year} <span style="color:var(--color-text-muted);font-weight:400">(${yearsFromNow >= 0 ? '+' : ''}${yearsFromNow}y)</span></div>${rows.join('') || '<div class="tt-row" style="color:var(--color-text-muted)">No scenarios selected</div>'}`;
+      tooltip.innerHTML = `<div class="tt-year">${year} <span style="color:var(--color-text-muted);font-weight:400">(${yearsFromNow >= 0 ? '+' : ''}${yearsFromNow}y)</span></div>${algoName === 'AES-128' ? '<div class="tt-row">Hypothetical scaling, not AES decryption odds</div>' : ''}${rows.join('') || '<div class="tt-row" style="color:var(--color-text-muted)">No scenarios selected</div>'}`;
       tooltip.classList.add('visible');
       tooltip.setAttribute('aria-hidden', 'false');
 
@@ -2085,7 +2105,7 @@ function buildApp(): void {
           <li>The HNDL calculators exclude signature-only and hash choices. A signing-key break creates future forgery and verification risk, not retrospective plaintext recovery. <a href="https://csrc.nist.gov/pubs/ir/8547/ipd" target="_blank" rel="noopener">NIST IR 8547, initial public draft (November 2024)</a>, distinguishes these migration use cases.</li>
           <li>Probability curves interpolate between GRI 2024 anchors (10y / 15y / 20y / 30y) with a smoothstep S-curve. The pessimistic scenario uses the report's published averages at all three surveyed horizons; the other scenarios are modelled midpoints and extrapolations around them.</li>
           <li>Quantum-safe algorithms are pinned to 0% exposure regardless of Mosca math.</li>
-          <li>AES-128 is treated as effectively broken for long-lived data (64-bit post-Grover).</li>
+          <li>The abstract Grover query bound is 2^64 for AES-128, but this is not a practical AES break. <a href="https://csrc.nist.gov/Projects/post-quantum-cryptography/faqs" target="_blank" rel="noopener">NIST's PQC FAQ (AES question added 18 November 2018; page updated 5 August 2026)</a> says current AES-128/192/256 can continue and practical Grover advantage may be little or none. The AES-128 chart's 0.5 multiplier is an illustrative model choice, not a quantitative forecast or migration directive.</li>
           <li>Planner as-of year is fixed at <strong>${CURRENT_YEAR}</strong>. Historical survey horizons remain anchored to <strong>${SURVEY_YEAR}</strong> (2034/2039/2044); illustrative arrival offsets are separate model assumptions. Neither date silently follows the system clock.</li>
         </ul>
       </div>

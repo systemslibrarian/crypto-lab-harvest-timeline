@@ -15,6 +15,13 @@ test('HNDL choices and profiles show confidentiality risk, not signature decrypt
   }
   await page.locator('#e1-algo').selectOption('ECDH + AES-256');
   await expect(page.locator('#e1-result')).toContainText('potential decryption');
+  await page.locator('#e1-algo').selectOption('AES-128');
+  await expect(page.locator('#e1-result')).toContainText('RISK: NONE');
+  await expect(page.locator('#e1-result')).toContainText('NIST currently permits AES-128');
+  await expect(page.locator('#e1-result')).not.toContainText('potential decryption');
+  await page.locator('#e3-algo').selectOption('AES-128');
+  await expect(page.locator('#e3-chart-title')).toContainText('not an AES decryption probability');
+  await expect(page.locator('.chart-caption a[href="https://csrc.nist.gov/Projects/post-quantum-cryptography/faqs"]')).toBeVisible();
   await page.locator('#e2-org').selectOption({ index: 3 });
   await expect(page.locator('#e2-content table')).not.toContainText('ECDSA-P256 + AES-256');
   await expect(page.locator('#e2-content table')).not.toContainText('Ed25519 + AES-256');

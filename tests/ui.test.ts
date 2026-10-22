@@ -160,14 +160,29 @@ describe('UI smoke — Exhibit 3 exposure chart', () => {
     expect(svg).toMatch(/fill="#141d2e" stroke="#[0-9a-f]{6}" stroke-width="2"/i);
   });
 
-  it('overlays the full-strength ghost curve + annotation for a Grover-partial algo', () => {
+  it('labels the AES-128 curve as hypothetical and shows its unscaled reference', () => {
     const algo = document.getElementById('e3-algo') as HTMLSelectElement;
     algo.value = 'AES-128';
     algo.dispatchEvent(new Event('change'));
     const svg = document.querySelector('#e3-chart svg')?.innerHTML ?? '';
-    expect(svg).toContain('stroke-dasharray="2,4"'); // dashed ghost reference line
-    expect(svg).toMatch(/Grover only halves/);       // the annotation
+    expect(svg).toContain('stroke-dasharray="2,4"'); // dashed unscaled reference line
+    expect(svg).toMatch(/Grover halves idealized key-search bits/);
+    expect(svg).toMatch(/curve ×0\.5 is illustrative/); // separate the heuristic probability scaling
+    expect(document.querySelector('#e3-chart-title')?.textContent).toMatch(/not an AES decryption probability/);
+    expect(document.querySelector('.chart-caption a[href="https://csrc.nist.gov/Projects/post-quantum-cryptography/faqs"]')).not.toBeNull();
     // restore
+    algo.value = 'RSA-2048';
+    algo.dispatchEvent(new Event('change'));
+  });
+
+  it('treats AES-128 as permitted despite an X+Y timing overlap', () => {
+    const algo = document.getElementById('e1-algo') as HTMLSelectElement;
+    algo.value = 'AES-128';
+    algo.dispatchEvent(new Event('change'));
+    const result = document.getElementById('e1-result')?.textContent ?? '';
+    expect(result).toContain('RISK: NONE');
+    expect(result).toContain('NIST currently permits AES-128');
+    expect(result).not.toContain('potential decryption');
     algo.value = 'RSA-2048';
     algo.dispatchEvent(new Event('change'));
   });
