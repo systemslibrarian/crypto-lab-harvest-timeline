@@ -57,7 +57,7 @@ export const PRESET_ORGANIZATIONS: OrganizationProfile[] = [
       {
         name: 'Email system',
         dataType: 'Corporate comms',
-        algorithm: 'TLS-ECDSA',
+        algorithm: 'ECDH + AES-256',
         dataLifetimeYears: 3,
         dataSizeTB: 1,
       },
@@ -93,7 +93,7 @@ export const PRESET_ORGANIZATIONS: OrganizationProfile[] = [
       {
         name: 'Internal emails',
         dataType: 'Corporate comms',
-        algorithm: 'TLS-ECDSA',
+        algorithm: 'ECDH + AES-256',
         dataLifetimeYears: 7,
         dataSizeTB: 5,
       },
@@ -115,7 +115,7 @@ export const PRESET_ORGANIZATIONS: OrganizationProfile[] = [
       {
         name: 'Intelligence comms',
         dataType: 'Classified government',
-        algorithm: 'ECDSA-P384 + AES-256',
+        algorithm: 'ECDH + AES-256',
         dataLifetimeYears: 50,
         dataSizeTB: 100,
       },
@@ -137,21 +137,21 @@ export const PRESET_ORGANIZATIONS: OrganizationProfile[] = [
       {
         name: 'User data',
         dataType: 'Personal data (PII)',
-        algorithm: 'ECDSA-P256 + AES-256',
+        algorithm: 'ECDH + AES-256',
         dataLifetimeYears: 5,
         dataSizeTB: 10,
       },
       {
         name: 'Source code repo',
         dataType: 'Intellectual property',
-        algorithm: 'Ed25519 + AES-256',
+        algorithm: 'AES-256',
         dataLifetimeYears: 20,
         dataSizeTB: 0.5,
       },
       {
         name: 'Customer comms',
         dataType: 'Corporate comms',
-        algorithm: 'TLS-ECDSA',
+        algorithm: 'ECDH + AES-256',
         dataLifetimeYears: 3,
         dataSizeTB: 2,
       },
@@ -173,7 +173,7 @@ export const PRESET_ORGANIZATIONS: OrganizationProfile[] = [
       {
         name: 'Clinical trial data',
         dataType: 'Research data',
-        algorithm: 'TLS-ECDSA',
+        algorithm: 'ECDH + AES-256',
         dataLifetimeYears: 15,
         dataSizeTB: 30,
       },

@@ -7,6 +7,10 @@
 
 This tool operationalizes the Harvest-Now-Decrypt-Later threat into concrete, quantified risk for specific data types, algorithms, and organizations. It is built around the **Mosca Inequality**:
 
+The HNDL calculators and exposure chart accept **confidentiality paths** only: a vulnerable public-key encryption/key-establishment step can expose recorded ciphertext after a future quantum attack. ECDSA, Ed25519, ML-DSA, and hash functions are excluded from those decryption estimates. Classical signature keys do need a post-quantum migration for future authenticity and forgery resistance, especially for long-lived firmware, trust anchors, and signing infrastructure; breaking such a signing key alone does not reveal old encrypted plaintext. This separation follows [NIST IR 8547, initial public draft, §§3.1.1–3.1.2 (November 2024)](https://csrc.nist.gov/pubs/ir/8547/ipd), alongside final [FIPS 203](https://csrc.nist.gov/pubs/fips/203/final) for ML-KEM key establishment and [FIPS 204](https://csrc.nist.gov/pubs/fips/204/final) for ML-DSA signatures (both 13 August 2024).
+
+The preset portfolios are illustrative confidentiality configurations: `ECDH + AES-256` means their encryption keys came through classical elliptic-curve key agreement, `RSA + AES-256` assumes the RSA key transports the AES key, and AES-256 alone models a separately managed symmetric key. Their certificate or code-signing mechanisms are independent inventory items, not a cause of the displayed TB decryption. Migration advice for those signatures belongs to a separate authenticity plan.
+
 ```
 X + Y > Z  →  YOUR DATA IS ALREADY AT RISK
 
@@ -88,10 +92,10 @@ Above the exhibits, a **"How the harvest works" mini-timeline** grounds *why* X 
 Interactive single-asset Mosca Inequality calculator. Choose a data type, algorithm, data lifetime (X), migration time (Y), and CRQC scenario (Z). Results update live. A **live plain-English sentence** re-narrates the cause-and-effect on every slider move ("Your medical records must stay secret for 30 yrs; you need 5 yrs to migrate; a CRQC likely arrives in 12 yrs — so 35 > 12, exposed for 23 years"), above the visual X+Y vs Z bar and a specific recommendation. The algorithm status badge glosses the **Shor/Grover** mechanism inline.
 
 ### Exhibit 2 — Organization Risk Profile
-Multi-asset dashboard for 5 preset organizations (small medical clinic, mid-size bank, government intelligence agency, tech startup, research university). Shows per-asset risk table, aggregate TB exposure, and priority migration order.
+Multi-asset dashboard for 5 preset organizations (small medical clinic, mid-size bank, government intelligence agency, tech startup, research university). Shows per-asset confidentiality risk, aggregate TB exposure, and priority migration order. It does not count signature-only vulnerabilities as decryptable TB.
 
 ### Exhibit 3 — Exposure Curve Over Time
-SVG year-by-year exposure probability chart (2026–2076). Overlays all 4 CRQC scenarios. Switch algorithms to see how curves shift. Quantum-safe algorithms (ML-KEM-768, etc.) hold flat at 0%. The **surveyed 2024 anchor horizons** are drawn as ringed dots (line between them is smoothed interpolation, captioned as such — not a forecast), and Grover-only ciphers overlay a **dashed full-strength reference curve** so the 0.5 modifier is visible.
+SVG year-by-year decryption exposure illustration (2026–2076) for confidentiality mechanisms. Overlays all 4 CRQC scenarios. Switch algorithms to see how curves shift. Quantum-safe mechanisms (ML-KEM-768, etc.) hold flat at 0% in this model. The **surveyed 2024 anchor horizons** are drawn as ringed dots (line between them is smoothed interpolation, captioned as such — not a forecast), and Grover-only ciphers overlay a **dashed full-strength reference curve** so the 0.5 modifier is visible. The curve does not predict signature forgery.
 
 ### Exhibit 4 — Cost of Delay
 What-if table: what does starting migration now vs. in 1, 2, 5, or 10 years look like? Shows exposed assets, exposed TB, and whether you beat or miss the CRQC arrival window.
@@ -111,14 +115,16 @@ Migrate first and it reads 2 of 5 (the two copies that already left). Skip the m
 
 ## Algorithm Coverage
 
-**Broken by Shor's algorithm (urgent migration needed):**  
-RSA-2048, RSA-4096, ECDSA-P256, ECDSA-P384, Ed25519, X25519 ECDH, TLS-ECDSA, and common hybrid combinations thereof.
+**Confidentiality paths vulnerable to Shor (HNDL calculator):**
+RSA-2048/4096 **when used for key transport or encryption**, X25519 ECDH, `ECDH + AES-256`, and `RSA + AES-256` when RSA transports the AES key. AES-256 does not rescue a session key derived from vulnerable RSA/ECDH public values recorded with the ciphertext.
 
-**Partially affected by Grover's algorithm:**  
-AES-128 (64-bit effective security — weak long-term), AES-256 (128-bit — still strong), SHA-256/SHA-384.
+**Symmetric confidentiality paths in the calculator:**
+AES-128 (illustrative 64-bit idealized Grover key-search work) and AES-256 (128-bit idealized key-search work). SHA-256/SHA-384 hash functions have separate preimage/collision properties and are not encryption choices.
 
-**Quantum-safe (migrate TO these):**  
-ML-KEM-768, ML-KEM-1024 (NIST FIPS 203, 2024), ML-DSA-65, ML-DSA-87 (FIPS 204, 2024), SLH-DSA (FIPS 205, 2024), LMS_H10, XMSS_H10.
+**Post-quantum confidentiality choices in the calculator:**
+ML-KEM-768 and ML-KEM-1024 (NIST FIPS 203, 2024), used to establish a key for symmetric encryption.
+
+**Separate authenticity migration:** ECDSA-P256/P384, Ed25519 and TLS-ECDSA authentication remain quantum-vulnerable, while ML-DSA-65/87 (FIPS 204), SLH-DSA (FIPS 205), and stateful LMS/XMSS are post-quantum signature options. They do not have retrospective decryption probabilities in this lab.
 
 ## Stack
 

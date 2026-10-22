@@ -39,9 +39,10 @@ function esc(s: string): string {
  * visible in the picker.
  */
 function buildAlgoOptgroups(): string {
-  const broken  = ALGORITHM_SECURITY.filter(a => a.broken);
-  const partial = ALGORITHM_SECURITY.filter(a => !a.broken && !a.longTermSafe);
-  const safe    = ALGORITHM_SECURITY.filter(a => !a.broken && a.longTermSafe);
+  const eligible = ALGORITHM_SECURITY.filter(a => a.purpose === 'confidentiality');
+  const broken  = eligible.filter(a => a.broken);
+  const partial = eligible.filter(a => !a.broken && !a.longTermSafe);
+  const safe    = eligible.filter(a => !a.broken && a.longTermSafe);
 
   const opts = (algs: typeof ALGORITHM_SECURITY): string =>
     algs.map(a => `<option value="${esc(a.algorithm)}">${esc(a.algorithm)}</option>`).join('');
@@ -238,8 +239,9 @@ function renderHarvestTimeline(): string {
       <span class="harvest-step-year">CRQC · <span class="hl-z">Z years</span></span>
       <h3 class="harvest-step-title">3 · Decrypt</h3>
       <p class="harvest-step-body">
-        A ${gloss('crqc')} arrives and runs ${gloss('shor')} on the stored ciphertext, recovering
-        the key and reading everything harvested in step 1 — retroactively.
+        A ${gloss('crqc')} arrives and runs ${gloss('shor')} on recorded RSA or ECDH
+        public values, recovers the data-encryption key, then reads the stored ciphertext.
+        A recorded ciphertext protected only by AES-256 has no such public-key shortcut.
       </p>
     </li>
   </ol>
@@ -267,8 +269,8 @@ interface QuickScenario {
 const QUICK_SCENARIOS: QuickScenario[] = [
   { id: 'medical-rsa',    label: 'Medical · RSA-2048',    hint: 'EHR encrypted with legacy RSA', dt: 'Medical records',        algo: 'RSA-2048',          x: 30, y: 5,  z: 'median' },
   { id: 'genomic-rsa',    label: 'Genomic · RSA-4096',    hint: '100-year sensitivity horizon',  dt: 'Genetic/genomic data',   algo: 'RSA-4096',          x: 80, y: 8,  z: 'median' },
-  { id: 'classified-ec',  label: 'Classified · ECDSA',    hint: 'CNSA 2.0-bound government',     dt: 'Classified government',  algo: 'ECDSA-P384 + AES-256', x: 50, y: 15, z: 'median' },
-  { id: 'finance-ecdh',   label: 'Financial · ECDH',      hint: 'Banking TLS at rest',           dt: 'Financial transactions', algo: 'ECDH + AES-256',    x: 10, y: 10, z: 'median' },
+  { id: 'classified-ec',  label: 'Classified · ECDH',     hint: 'Classical key establishment for sensitive traffic', dt: 'Classified government', algo: 'ECDH + AES-256', x: 50, y: 15, z: 'median' },
+  { id: 'finance-ecdh',   label: 'Financial · ECDH',      hint: 'Banking traffic in transit',    dt: 'Financial transactions', algo: 'ECDH + AES-256',    x: 10, y: 10, z: 'median' },
   { id: 'pii-mlkem',      label: 'PII · ML-KEM-768',      hint: 'Quantum-safe baseline',         dt: 'Personal data (PII)',    algo: 'ML-KEM-768',        x: 10, y: 2,  z: 'median' },
 ];
 
@@ -288,6 +290,14 @@ function renderExhibit1(): string {
     <h3>Personal Risk Calculator — Mosca Inequality for Your Data</h3>
   </div>
   <div class="exhibit-body">
+    <aside class="card" id="risk-boundary" role="note">
+      <strong>Two quantum risks, two jobs:</strong> recorded ciphertext protected by a vulnerable
+      key exchange or key transport can be read later; a vulnerable signing key can let an
+      attacker forge future signatures, but breaking it alone cannot decrypt stored data.
+      This calculator accepts only confidentiality paths. Signature migration still matters,
+      especially for long-lived firmware and trust anchors.
+      <a href="https://nvlpubs.nist.gov/nistpubs/ir/2024/NIST.IR.8547.ipd.pdf" target="_blank" rel="noopener">NIST IR 8547, initial public draft (November 2024), §§3.1.1–3.1.2</a>.
+    </aside>
     <div class="quick-scenarios" role="group" aria-label="Quick scenarios">
       <span class="quick-label">Try:</span>
       ${QUICK_SCENARIOS.map(s => `
@@ -303,7 +313,7 @@ function renderExhibit1(): string {
           <span class="field-sublabel" id="e1-lifetime-hint"></span>
         </div>
         <div class="field-group">
-          <label class="field-label" for="e1-algo">Current Algorithm</label>
+          <label class="field-label" for="e1-algo">Current confidentiality algorithm / key establishment</label>
           <select id="e1-algo">${algoOptions}</select>
           <div class="algo-status" id="e1-algo-status" role="status" aria-live="polite"></div>
         </div>
@@ -619,6 +629,7 @@ function renderExhibit2(): string {
     <h3>Organization Risk Profile — Multi-Asset Mosca Analysis</h3>
   </div>
   <div class="exhibit-body">
+    <p class="small-note">These illustrative profiles specify the mechanism protecting each asset's confidentiality. Their certificate and code-signing keys require a separate authenticity migration; a signature does not encrypt these TB of data.</p>
     <div class="org-controls">
       <div class="field-group">
         <label class="field-label" for="e2-org">Organization Profile</label>
@@ -1008,6 +1019,8 @@ function renderExhibit3(): string {
     </div>
     <div class="svg-chart-wrap" id="e3-chart"></div>
     <p class="chart-caption">
+      This chart models <strong>retrospective decryption</strong> for confidentiality paths only.
+      It does not predict when an old signature could be forged.
       <strong>Reading this chart:</strong> the ringed dots sit on the horizons the
       historical 2024 GRI/evolutionQ expert survey asked about: 10, 15 and 20 years
       from ${SURVEY_YEAR}, fixed at 2034, 2039 and 2044. The planner as-of year is ${CURRENT_YEAR}.
@@ -1543,7 +1556,7 @@ function renderExhibit5(): string {
         <li>Use <strong>AES-256-GCM</strong> for symmetric encryption (Grover → 128-bit, still safe)</li>
         <li>Use <strong>ML-DSA-65</strong> or <strong>SLH-DSA</strong> for signatures (NIST FIPS 204/205, 2024)</li>
         <li>Design for <strong>crypto-agility</strong>: abstract all crypto behind an interface so algorithms can be swapped</li>
-        <li><strong>NEVER</strong> use RSA-2048, ECDSA-P256, Ed25519, or X25519 for anything with a >5 year sensitivity horizon</li>
+        <li>For long-lived confidentiality, migrate classical RSA key transport and X25519 key agreement. Separately plan migration of RSA, ECDSA and Ed25519 signing for future authenticity.</li>
         <li>For messaging: use Signal Protocol V2 design (hybrid X25519+ML-KEM) or MLS protocol with PQC</li>
         <li>For firmware/IoT: use LMS or XMSS (stateful hash-based — CNSA 2.0 required for firmware signing)</li>
       </ul>
@@ -2008,7 +2021,7 @@ function buildApp(): void {
     </div>
     <aside class="cl-hero-why" aria-label="Why it matters">
       <span class="cl-hero-why-label">WHY IT MATTERS</span>
-      <p class="cl-hero-why-text">An adversary can record your encrypted traffic today and decrypt it years later once a quantum computer exists. If shelf life plus migration time outruns that clock, data you send now is already compromised.</p>
+      <p class="cl-hero-why-text">An adversary can record your encrypted traffic today and potentially decrypt it years later if a suitable quantum computer is built. If shelf life plus migration time outruns that clock, data you send now is already at risk.</p>
     </aside>
   </header>
 
@@ -2051,8 +2064,8 @@ function buildApp(): void {
       <div>
         <h3>NIST PQC Standards (2024)</h3>
         <ul>
-          <li><strong>FIPS 203</strong> — ML-KEM (Module-Lattice KEM).</li>
-          <li><strong>FIPS 204</strong> — ML-DSA (Module-Lattice Signature).</li>
+          <li><a href="https://csrc.nist.gov/pubs/fips/203/final" target="_blank" rel="noopener"><strong>FIPS 203</strong></a> — ML-KEM, shared-secret establishment for encryption (final, 13 August 2024).</li>
+          <li><a href="https://csrc.nist.gov/pubs/fips/204/final" target="_blank" rel="noopener"><strong>FIPS 204</strong></a> — ML-DSA, authenticity and integrity (final, 13 August 2024).</li>
           <li><strong>FIPS 205</strong> — SLH-DSA (Hash-Based Signature).</li>
           <li><strong>SP 1800-38B</strong> — Migrating to Post-Quantum Cryptography.</li>
         </ul>
@@ -2069,6 +2082,7 @@ function buildApp(): void {
         <h3>Methodology Notes</h3>
         <ul>
           <li>The Mosca Inequality is a <em>planning</em> framework, not a compliance tool — satisfying it does not guarantee security.</li>
+          <li>The HNDL calculators exclude signature-only and hash choices. A signing-key break creates future forgery and verification risk, not retrospective plaintext recovery. <a href="https://csrc.nist.gov/pubs/ir/8547/ipd" target="_blank" rel="noopener">NIST IR 8547, initial public draft (November 2024)</a>, distinguishes these migration use cases.</li>
           <li>Probability curves interpolate between GRI 2024 anchors (10y / 15y / 20y / 30y) with a smoothstep S-curve. The pessimistic scenario uses the report's published averages at all three surveyed horizons; the other scenarios are modelled midpoints and extrapolations around them.</li>
           <li>Quantum-safe algorithms are pinned to 0% exposure regardless of Mosca math.</li>
           <li>AES-128 is treated as effectively broken for long-lived data (64-bit post-Grover).</li>

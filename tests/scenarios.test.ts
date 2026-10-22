@@ -29,6 +29,13 @@ describe('PRESET_ORGANIZATIONS', () => {
     }
   });
 
+  it('never classifies signature-only mechanisms as decryptable TB in preset portfolios', () => {
+    const signatureNames = /ECDSA|Ed25519|ML-DSA|SLH-DSA|TLS-ECDSA/;
+    for (const profile of PRESET_ORGANIZATIONS) {
+      for (const asset of profile.assets) expect(asset.algorithm).not.toMatch(signatureNames);
+    }
+  });
+
   it('every profile has positive typicalMigrationYears', () => {
     for (const o of PRESET_ORGANIZATIONS) {
       expect(o.typicalMigrationYears).toBeGreaterThan(0);

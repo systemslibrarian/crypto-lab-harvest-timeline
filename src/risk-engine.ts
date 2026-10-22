@@ -99,6 +99,8 @@ export const CRQC_SCENARIOS: CRQCScenario[] = [
  */
 export interface AlgorithmQuantumSecurity {
   algorithm: string;
+  /** Only confidentiality mechanisms belong in the HNDL/decryption model. */
+  purpose: 'confidentiality' | 'signature' | 'hash' | 'unspecified-key-establishment';
   classicalStrength: number; // bits
   quantumStrength: number;   // bits (post-Grover/Shor)
   broken: boolean;           // completely broken by quantum
@@ -110,22 +112,25 @@ export const ALGORITHM_SECURITY: AlgorithmQuantumSecurity[] = [
   // BROKEN by Shor's algorithm (need urgent migration)
   {
     algorithm: 'RSA-2048',
+    purpose: 'confidentiality',
     classicalStrength: 112,
     quantumStrength: 0,
     broken: true,
     longTermSafe: false,
-    notes: "Fully broken by Shor's algorithm",
+    notes: "RSA key transport/encryption is vulnerable to Shor's algorithm; RSA signatures are a separate authenticity risk",
   },
   {
     algorithm: 'RSA-4096',
+    purpose: 'confidentiality',
     classicalStrength: 152,
     quantumStrength: 0,
     broken: true,
     longTermSafe: false,
-    notes: "Larger key helps classically, still Shor-vulnerable",
+    notes: 'RSA key transport/encryption remains Shor-vulnerable despite the larger key',
   },
   {
     algorithm: 'ECDSA-P256',
+    purpose: 'signature',
     classicalStrength: 128,
     quantumStrength: 0,
     broken: true,
@@ -134,6 +139,7 @@ export const ALGORITHM_SECURITY: AlgorithmQuantumSecurity[] = [
   },
   {
     algorithm: 'ECDSA-P384',
+    purpose: 'signature',
     classicalStrength: 192,
     quantumStrength: 0,
     broken: true,
@@ -142,6 +148,7 @@ export const ALGORITHM_SECURITY: AlgorithmQuantumSecurity[] = [
   },
   {
     algorithm: 'Ed25519',
+    purpose: 'signature',
     classicalStrength: 128,
     quantumStrength: 0,
     broken: true,
@@ -150,6 +157,7 @@ export const ALGORITHM_SECURITY: AlgorithmQuantumSecurity[] = [
   },
   {
     algorithm: 'X25519 ECDH',
+    purpose: 'confidentiality',
     classicalStrength: 128,
     quantumStrength: 0,
     broken: true,
@@ -158,6 +166,7 @@ export const ALGORITHM_SECURITY: AlgorithmQuantumSecurity[] = [
   },
   {
     algorithm: 'TLS-ECDSA',
+    purpose: 'signature',
     classicalStrength: 128,
     quantumStrength: 0,
     broken: true,
@@ -166,46 +175,52 @@ export const ALGORITHM_SECURITY: AlgorithmQuantumSecurity[] = [
   },
   {
     algorithm: 'RSA-2048 + AES-256',
+    purpose: 'confidentiality',
     classicalStrength: 112,
     quantumStrength: 0,
     broken: true,
     longTermSafe: false,
-    notes: "RSA key exchange broken by Shor's; AES-256 layer alone cannot protect",
+    notes: "Assumes RSA transports the AES key: Shor's can recover the key despite AES-256",
   },
   {
     algorithm: 'RSA-4096 + AES-256',
+    purpose: 'confidentiality',
     classicalStrength: 152,
     quantumStrength: 0,
     broken: true,
     longTermSafe: false,
-    notes: "RSA key exchange broken by Shor's; overall system remains vulnerable",
+    notes: "Assumes RSA transports the AES key: Shor's can recover the key despite AES-256",
   },
   {
     algorithm: 'ECDSA-P256 + AES-256',
+    purpose: 'unspecified-key-establishment',
     classicalStrength: 128,
     quantumStrength: 0,
     broken: true,
     longTermSafe: false,
-    notes: 'ECDSA component broken by Shor (ECDLP)',
+    notes: 'ECDSA is a signature; the separately established AES key determines confidentiality',
   },
   {
     algorithm: 'ECDSA-P384 + AES-256',
+    purpose: 'unspecified-key-establishment',
     classicalStrength: 192,
     quantumStrength: 0,
     broken: true,
     longTermSafe: false,
-    notes: 'ECDSA component broken by Shor (ECDLP)',
+    notes: 'ECDSA is a signature; the separately established AES key determines confidentiality',
   },
   {
     algorithm: 'Ed25519 + AES-256',
+    purpose: 'unspecified-key-establishment',
     classicalStrength: 128,
     quantumStrength: 0,
     broken: true,
     longTermSafe: false,
-    notes: 'Ed25519 component broken by Shor (ECDLP)',
+    notes: 'Ed25519 is a signature; the separately established AES key determines confidentiality',
   },
   {
     algorithm: 'ECDH + AES-256',
+    purpose: 'confidentiality',
     classicalStrength: 128,
     quantumStrength: 0,
     broken: true,
@@ -216,6 +231,7 @@ export const ALGORITHM_SECURITY: AlgorithmQuantumSecurity[] = [
   // PARTIALLY AFFECTED by Grover's algorithm
   {
     algorithm: 'AES-128',
+    purpose: 'confidentiality',
     classicalStrength: 128,
     quantumStrength: 64,
     broken: false,
@@ -224,6 +240,7 @@ export const ALGORITHM_SECURITY: AlgorithmQuantumSecurity[] = [
   },
   {
     algorithm: 'AES-256',
+    purpose: 'confidentiality',
     classicalStrength: 256,
     quantumStrength: 128,
     broken: false,
@@ -232,6 +249,7 @@ export const ALGORITHM_SECURITY: AlgorithmQuantumSecurity[] = [
   },
   {
     algorithm: 'SHA-256',
+    purpose: 'hash',
     classicalStrength: 128,
     quantumStrength: 85,
     broken: false,
@@ -242,6 +260,7 @@ export const ALGORITHM_SECURITY: AlgorithmQuantumSecurity[] = [
   },
   {
     algorithm: 'SHA-384',
+    purpose: 'hash',
     classicalStrength: 192,
     quantumStrength: 128,
     broken: false,
@@ -253,6 +272,7 @@ export const ALGORITHM_SECURITY: AlgorithmQuantumSecurity[] = [
   // QUANTUM-SAFE (NIST PQC standards — migrate TO these)
   {
     algorithm: 'ML-KEM-768',
+    purpose: 'confidentiality',
     classicalStrength: 192,
     quantumStrength: 192,
     broken: false,
@@ -263,6 +283,7 @@ export const ALGORITHM_SECURITY: AlgorithmQuantumSecurity[] = [
   },
   {
     algorithm: 'ML-KEM-1024',
+    purpose: 'confidentiality',
     classicalStrength: 256,
     quantumStrength: 256,
     broken: false,
@@ -272,6 +293,7 @@ export const ALGORITHM_SECURITY: AlgorithmQuantumSecurity[] = [
   },
   {
     algorithm: 'ML-DSA-65',
+    purpose: 'signature',
     classicalStrength: 192,
     quantumStrength: 192,
     broken: false,
@@ -282,6 +304,7 @@ export const ALGORITHM_SECURITY: AlgorithmQuantumSecurity[] = [
   },
   {
     algorithm: 'ML-DSA-87',
+    purpose: 'signature',
     classicalStrength: 256,
     quantumStrength: 256,
     broken: false,
@@ -292,6 +315,7 @@ export const ALGORITHM_SECURITY: AlgorithmQuantumSecurity[] = [
   },
   {
     algorithm: 'SLH-DSA',
+    purpose: 'signature',
     classicalStrength: 128,
     quantumStrength: 128,
     broken: false,
@@ -300,6 +324,7 @@ export const ALGORITHM_SECURITY: AlgorithmQuantumSecurity[] = [
   },
   {
     algorithm: 'LMS_H10',
+    purpose: 'signature',
     classicalStrength: 128,
     quantumStrength: 128,
     broken: false,
@@ -308,6 +333,7 @@ export const ALGORITHM_SECURITY: AlgorithmQuantumSecurity[] = [
   },
   {
     algorithm: 'XMSS_H10',
+    purpose: 'signature',
     classicalStrength: 128,
     quantumStrength: 128,
     broken: false,
@@ -441,6 +467,14 @@ function getAlgorithmSecurity(algorithm: string): AlgorithmQuantumSecurity | und
   );
 }
 
+function requireConfidentialityAlgorithm(algorithm: string): AlgorithmQuantumSecurity {
+  const item = getAlgorithmSecurity(algorithm);
+  if (!item || item.purpose !== 'confidentiality') {
+    throw new Error(`${algorithm} is not a supported confidentiality mechanism for a decryption-risk calculation`);
+  }
+  return item;
+}
+
 function computeRiskLevel(
   algInfo: AlgorithmQuantumSecurity | undefined,
   X: number,
@@ -475,6 +509,7 @@ export function assessRisk(
   migrationTimeYears: number,
   scenario: CRQCScenario,
 ): RiskAssessment {
+  const algInfo = requireConfidentialityAlgorithm(algorithm);
   const X = dataLifetimeYears;
   const Y = migrationTimeYears;
   const Z = scenario.yearsFromNow;
@@ -484,7 +519,6 @@ export function assessRisk(
   const exposed = X + Y > Z;
   const marginYears = Z - (X + Y);
 
-  const algInfo = getAlgorithmSecurity(algorithm);
   const riskLevel = computeRiskLevel(algInfo, X, Y, Z);
 
   // Exposure window: the period during which harvested data can be decrypted
@@ -517,15 +551,14 @@ export function assessRisk(
         ? 'At the planning boundary (X + Y = Z): no spare time; strict exposure is not established.'
         : `EXPOSED by ${Math.abs(marginYears).toFixed(0)} years.`) +
       ' Begin PQC migration immediately. Use hybrid classical+ML-KEM-768 for new data.' +
-      ' Prioritize re-encryption of high-value assets.';
+      ' Prioritize fresh protection for high-value assets; previously copied ciphertext cannot be recalled.';
     recommendedAction = 'urgent_migration';
   } else {
     // critical
     recommendation =
       `CRITICAL: Exposed by ${Math.abs(marginYears).toFixed(0)} years.` +
-      ' Data encrypted today is ALREADY being harvested for future decryption.' +
-      ' Emergency migration required — deploy ML-KEM-1024/ML-DSA-87 immediately.' +
-      ' CNSA 2.0 compliance may be required (classified data).';
+      ' Recorded ciphertext remains at risk after a future CRQC.' +
+      ' Migrate key establishment to an appropriate ML-KEM or hybrid profile; plan signature migration separately.';
     recommendedAction = 'emergency_migration';
   }
 
@@ -593,7 +626,7 @@ export function exposureAnchors(scenario: CRQCScenario): ExposureAnchor[] {
 export const GROVER_PARTIAL_MODIFIER = 0.5;
 
 export function exposureModifier(algorithm: string): number {
-  const algInfo = getAlgorithmSecurity(algorithm);
+  const algInfo = requireConfidentialityAlgorithm(algorithm);
   // Partially-broken algorithms (AES-128) have reduced risk vs. a Shor-broken key.
   return algInfo && !algInfo.broken ? GROVER_PARTIAL_MODIFIER : 1.0;
 }
@@ -604,7 +637,7 @@ export function computeExposureCurve(
   horizonYears: number = 50,
   asOfYear: number = CURRENT_YEAR,
 ): Array<{ year: number; probDecryptable: number }> {
-  const algInfo = getAlgorithmSecurity(algorithm);
+  const algInfo = requireConfidentialityAlgorithm(algorithm);
 
   // Quantum-safe: negligible probability
   if (algInfo && !algInfo.broken && algInfo.longTermSafe) {

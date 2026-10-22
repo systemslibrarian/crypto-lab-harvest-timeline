@@ -31,6 +31,20 @@ describe('UI smoke — app mount', () => {
     expect(groups.length).toBe(3);
   });
 
+  it('shows the dated NIST source and excludes signatures from decryption controls', () => {
+    const note = document.getElementById('risk-boundary');
+    expect(note?.textContent).toMatch(/forge future signatures.*cannot decrypt stored data/s);
+    expect(note?.querySelector('a')?.getAttribute('href')).toBe('https://nvlpubs.nist.gov/nistpubs/ir/2024/NIST.IR.8547.ipd.pdf');
+    for (const id of ['e1-algo', 'e3-algo']) {
+      const labels = Array.from((document.getElementById(id) as HTMLSelectElement).options).map(o => o.value);
+      expect(labels).toContain('ECDH + AES-256');
+      expect(labels).not.toContain('ECDSA-P256');
+      expect(labels).not.toContain('TLS-ECDSA');
+      expect(labels).not.toContain('ML-DSA-65');
+      expect(labels).not.toContain('SHA-256');
+    }
+  });
+
   it('renders the "how the harvest works" mini-timeline with three steps', () => {
     const explainer = document.getElementById('harvest-explainer');
     expect(explainer).not.toBeNull();

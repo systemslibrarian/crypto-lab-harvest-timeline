@@ -82,8 +82,17 @@ describe('assessRisk — risk level grading', () => {
 
   it('quantum-safe stays "none" even under aggressive CRQC', () => {
     const aggressive = CRQC_SCENARIOS.find((s) => s.label === 'aggressive')!;
-    const r = assessRisk('test', 'ML-DSA-65', 100, 20, aggressive);
+    const r = assessRisk('test', 'ML-KEM-1024', 100, 20, aggressive);
     expect(r.riskLevel).toBe('none');
+  });
+
+  it('never turns a signature or a hash into a stored-ciphertext decryption claim', () => {
+    for (const algorithm of ['ECDSA-P256', 'Ed25519', 'TLS-ECDSA', 'ECDSA-P256 + AES-256', 'ML-DSA-65', 'SHA-256']) {
+      expect(() => assessRisk('records', algorithm, 80, 10, median)).toThrow(/not a supported confidentiality mechanism/);
+      expect(() => computeExposureCurve(algorithm, median)).toThrow(/not a supported confidentiality mechanism/);
+    }
+    // The secret-establishment mechanism, rather than a TLS signature, drives the HNDL verdict.
+    expect(assessRisk('records', 'ECDH + AES-256', 80, 10, median).riskLevel).toBe('critical');
   });
 
   it('broken algo with huge exposure → critical', () => {
@@ -175,7 +184,7 @@ describe('aggregateOrgRisk', () => {
     const result = aggregateOrgRisk(
       [
         { name: 'a', algorithm: 'ML-KEM-768', X: 100, Y: 20, dataSizeTB: 10 },
-        { name: 'b', algorithm: 'ML-DSA-65', X: 50, Y: 10, dataSizeTB: 5 },
+        { name: 'b', algorithm: 'AES-256', X: 50, Y: 10, dataSizeTB: 5 },
       ],
       median,
     );

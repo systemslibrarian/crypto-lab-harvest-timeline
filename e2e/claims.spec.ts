@@ -1,5 +1,25 @@
 import { expect, test } from '@playwright/test';
 
+test('HNDL choices and profiles show confidentiality risk, not signature decryption', async ({ page }) => {
+  await page.goto('.');
+  const note = page.locator('#risk-boundary');
+  await expect(note).toContainText('forge future signatures');
+  await expect(note).toContainText('cannot decrypt stored data');
+  await expect(note.locator('a')).toHaveAttribute('href', 'https://nvlpubs.nist.gov/nistpubs/ir/2024/NIST.IR.8547.ipd.pdf');
+  for (const picker of ['#e1-algo', '#e3-algo']) {
+    const values = await page.locator(`${picker} option`).evaluateAll(options => options.map(o => (o as HTMLOptionElement).value));
+    expect(values).toContain('ECDH + AES-256');
+    for (const signature of ['ECDSA-P256', 'Ed25519', 'TLS-ECDSA', 'ML-DSA-65', 'SHA-256']) {
+      expect(values, `${picker} must not offer ${signature} for decryption`).not.toContain(signature);
+    }
+  }
+  await page.locator('#e1-algo').selectOption('ECDH + AES-256');
+  await expect(page.locator('#e1-result')).toContainText('potential decryption');
+  await page.locator('#e2-org').selectOption({ index: 3 });
+  await expect(page.locator('#e2-content table')).not.toContainText('ECDSA-P256 + AES-256');
+  await expect(page.locator('#e2-content table')).not.toContainText('Ed25519 + AES-256');
+});
+
 /**
  * Exhibit 4's headline used to read "Every year of delay increases the exposure
  * window" over a table whose exposure columns were flat across all five delay
