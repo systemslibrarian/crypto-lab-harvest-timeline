@@ -24,7 +24,7 @@ for (const width of [1280, 390, 320]) {
     await expect(caption).toContainText('2034, 2039 and 2044');
     await expect(caption).toContainText('historical 2024');
     await expect(caption).toContainText('not a calibrated forecast');
-    await expect(caption.locator('a')).toHaveAttribute('href', 'https://globalriskinstitute.org/publication/quantum-threat-timeline-report-2025b/');
+    await expect(caption.getByRole('link', { name: '2025 expert survey' })).toHaveAttribute('href', 'https://globalriskinstitute.org/publication/quantum-threat-timeline-report-2025b/');
     expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
   });
 }
