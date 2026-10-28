@@ -5,7 +5,8 @@ test('HNDL choices and profiles show confidentiality risk, not signature decrypt
   const note = page.locator('#risk-boundary');
   await expect(note).toContainText('forge future signatures');
   await expect(note).toContainText('cannot decrypt stored data');
-  await expect(note.locator('a')).toHaveAttribute('href', 'https://nvlpubs.nist.gov/nistpubs/ir/2024/NIST.IR.8547.ipd.pdf');
+  await expect(note).toContainText('final report (27 October 2026)');
+  await expect(note.locator('a')).toHaveAttribute('href', 'https://csrc.nist.gov/pubs/ir/8547/final');
   for (const picker of ['#e1-algo', '#e3-algo']) {
     const values = await page.locator(`${picker} option`).evaluateAll(options => options.map(o => (o as HTMLOptionElement).value));
     expect(values).toContain('ECDH + AES-256');

@@ -34,7 +34,7 @@ describe('UI smoke — app mount', () => {
   it('shows the dated NIST source and excludes signatures from decryption controls', () => {
     const note = document.getElementById('risk-boundary');
     expect(note?.textContent).toMatch(/forge future signatures.*cannot decrypt stored data/s);
-    expect(note?.querySelector('a')?.getAttribute('href')).toBe('https://nvlpubs.nist.gov/nistpubs/ir/2024/NIST.IR.8547.ipd.pdf');
+    expect(note?.querySelector('a')?.getAttribute('href')).toBe('https://csrc.nist.gov/pubs/ir/8547/final');
     for (const id of ['e1-algo', 'e3-algo']) {
       const labels = Array.from((document.getElementById(id) as HTMLSelectElement).options).map(o => o.value);
       expect(labels).toContain('ECDH + AES-256');

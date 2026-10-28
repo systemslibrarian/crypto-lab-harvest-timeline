@@ -296,7 +296,7 @@ function renderExhibit1(): string {
       attacker forge future signatures, but breaking it alone cannot decrypt stored data.
       This calculator accepts only confidentiality paths. Signature migration still matters,
       especially for long-lived firmware and trust anchors.
-      <a href="https://nvlpubs.nist.gov/nistpubs/ir/2024/NIST.IR.8547.ipd.pdf" target="_blank" rel="noopener">NIST IR 8547, initial public draft (November 2024), §§3.1.1–3.1.2</a>.
+      <a href="https://csrc.nist.gov/pubs/ir/8547/final" target="_blank" rel="noopener">NIST IR 8547, final report (27 October 2026), §§3–3.1.3</a>.
     </aside>
     <div class="quick-scenarios" role="group" aria-label="Quick scenarios">
       <span class="quick-label">Try:</span>
@@ -2102,7 +2102,7 @@ function buildApp(): void {
         <h3>Methodology Notes</h3>
         <ul>
           <li>The Mosca Inequality is a <em>planning</em> framework, not a compliance tool — satisfying it does not guarantee security.</li>
-          <li>The HNDL calculators exclude signature-only and hash choices. A signing-key break creates future forgery and verification risk, not retrospective plaintext recovery. <a href="https://csrc.nist.gov/pubs/ir/8547/ipd" target="_blank" rel="noopener">NIST IR 8547, initial public draft (November 2024)</a>, distinguishes these migration use cases.</li>
+          <li>The HNDL calculators exclude signature-only and hash choices. A signing-key break creates future forgery and verification risk, not retrospective plaintext recovery. <a href="https://csrc.nist.gov/pubs/ir/8547/final" target="_blank" rel="noopener">NIST IR 8547, final report (27 October 2026)</a>, distinguishes these migration use cases.</li>
           <li>Probability curves interpolate between GRI 2024 anchors (10y / 15y / 20y / 30y) with a smoothstep S-curve. The pessimistic scenario uses the report's published averages at all three surveyed horizons; the other scenarios are modelled midpoints and extrapolations around them.</li>
           <li>Quantum-safe algorithms are pinned to 0% exposure regardless of Mosca math.</li>
           <li>The abstract Grover query bound is 2^64 for AES-128, but this is not a practical AES break. <a href="https://csrc.nist.gov/Projects/post-quantum-cryptography/faqs" target="_blank" rel="noopener">NIST's PQC FAQ (AES question added 18 November 2018; page updated 5 August 2026)</a> says current AES-128/192/256 can continue and practical Grover advantage may be little or none. The AES-128 chart's 0.5 multiplier is an illustrative model choice, not a quantitative forecast or migration directive.</li>

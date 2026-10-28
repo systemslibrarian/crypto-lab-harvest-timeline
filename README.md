@@ -7,7 +7,7 @@
 
 This tool operationalizes the Harvest-Now-Decrypt-Later threat into concrete, quantified risk for specific data types, algorithms, and organizations. It is built around the **Mosca Inequality**:
 
-The HNDL calculators and exposure chart accept **confidentiality paths** only: a vulnerable public-key encryption/key-establishment step can expose recorded ciphertext after a future quantum attack. ECDSA, Ed25519, ML-DSA, and hash functions are excluded from those decryption estimates. Classical signature keys do need a post-quantum migration for future authenticity and forgery resistance, especially for long-lived firmware, trust anchors, and signing infrastructure; breaking such a signing key alone does not reveal old encrypted plaintext. This separation follows [NIST IR 8547, initial public draft, §§3.1.1–3.1.2 (November 2024)](https://csrc.nist.gov/pubs/ir/8547/ipd), alongside final [FIPS 203](https://csrc.nist.gov/pubs/fips/203/final) for ML-KEM key establishment and [FIPS 204](https://csrc.nist.gov/pubs/fips/204/final) for ML-DSA signatures (both 13 August 2024).
+The HNDL calculators and exposure chart accept **confidentiality paths** only: a vulnerable public-key encryption/key-establishment step can expose recorded ciphertext after a future quantum attack. ECDSA, Ed25519, ML-DSA, and hash functions are excluded from those decryption estimates. Classical signature keys do need a post-quantum migration for future authenticity and forgery resistance, especially for long-lived firmware, trust anchors, and signing infrastructure; breaking such a signing key alone does not reveal old encrypted plaintext. This separation follows [NIST IR 8547, final report, §§3–3.1.3 (27 October 2026)](https://csrc.nist.gov/pubs/ir/8547/final), alongside final [FIPS 203](https://csrc.nist.gov/pubs/fips/203/final) for ML-KEM key establishment and [FIPS 204](https://csrc.nist.gov/pubs/fips/204/final) for ML-DSA signatures (both 13 August 2024).
 
 The preset portfolios are illustrative confidentiality configurations: `ECDH + AES-256` means their encryption keys came through classical elliptic-curve key agreement, `RSA + AES-256` assumes the RSA key transports the AES key, and AES-256 alone models a separately managed symmetric key. Their certificate or code-signing mechanisms are independent inventory items, not a cause of the displayed TB decryption. Migration advice for those signatures belongs to a separate authenticity plan.
 
@@ -165,3 +165,7 @@ CI runs `npm test` and `npm run build` on every push and PR to `main`. The
 *Part of the [Crypto Lab](https://crypto-lab.systemslibrarian.dev/) suite.*
 
 *"So whether you eat or drink or whatever you do, do it all for the glory of God." — 1 Corinthians 10:31*
+
+## Research update — 28 October 2026
+
+[NIST IR 8547](https://csrc.nist.gov/pubs/ir/8547/final) was published as a final report on 27 October 2026. The risk-boundary and methodology notes now cite the final report, §§3–3.1.3. Confidentiality and signature migration remain separate; no risk-calculator formulas changed.
