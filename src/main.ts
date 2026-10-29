@@ -353,7 +353,7 @@ function renderExhibit1(): string {
       </div>
     </div>
     <div class="exhibit-toolbar">
-      <button class="toolbar-btn" id="e1-share" type="button" aria-label="Copy a shareable URL for this scenario">
+      <button class="toolbar-btn" id="e1-share" type="button" aria-label="Copy share link: a shareable URL for this scenario">
         <span aria-hidden="true">🔗</span> <span class="btn-label">Copy share link</span>
       </button>
       <button class="toolbar-btn" id="e1-reset" type="button" aria-label="Reset calculator to defaults">
@@ -1056,7 +1056,7 @@ function renderExhibit3(): string {
     </p>
     <div class="chart-legend" id="e3-legend"></div>
     <div class="exhibit-toolbar">
-      <button class="toolbar-btn" id="e3-png" type="button" aria-label="Download exposure curve as PNG image">
+      <button class="toolbar-btn" id="e3-png" type="button" aria-label="Download PNG: the exposure curve as a PNG image">
         <span aria-hidden="true">⬇</span> Download PNG
       </button>
     </div>
