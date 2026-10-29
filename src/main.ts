@@ -657,7 +657,7 @@ function renderExhibit2(): string {
     </div>
     <div id="e2-content" aria-live="polite"></div>
     <div class="exhibit-toolbar">
-      <button class="toolbar-btn" id="e2-csv" type="button" aria-label="Download organization risk analysis as CSV">
+      <button class="toolbar-btn" id="e2-csv" type="button" aria-label="Export CSV: download the organization risk analysis">
         <span aria-hidden="true">⬇</span> Export CSV
       </button>
     </div>
