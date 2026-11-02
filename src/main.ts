@@ -1257,7 +1257,11 @@ function initExhibit3(): void {
       : compact
         ? `${algoName} — decryptability over time`
         : `${algoName} — probability that harvested ciphertext becomes decryptable`;
-    svgContent += `<text x="${padL + chartW / 2}" y="${svgH - 5}" text-anchor="middle" font-size="${fTitle}" fill="${titleColor}">${titleText}</text>`;
+    // titleText embeds the algorithm select's value, so it is escaped here. This
+    // is the visible chart heading, and it was the one interpolation in this
+    // template with no escaping at all -- the reason completing esc() closed the
+    // seven attribute alerts and left this one open.
+    svgContent += `<text x="${padL + chartW / 2}" y="${svgH - 5}" text-anchor="middle" font-size="${fTitle}" fill="${titleColor}">${esc(titleText)}</text>`;
 
     // Crosshair (hidden by default) + dot group + transparent overlay for pointer events
     svgContent += `<line id="e3-crosshair" x1="0" y1="${padT}" x2="0" y2="${padT + chartH}" stroke="${C_TEXT}" stroke-width="1" stroke-dasharray="3,3" opacity="0" pointer-events="none"/>`;
