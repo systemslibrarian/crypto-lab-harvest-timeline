@@ -28,8 +28,24 @@ import {
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
+/**
+ * Escape a value for either an HTML text position or a quoted attribute value.
+ *
+ * `"` and `'` are here because most of this file's 36 call sites interpolate
+ * into `attr="..."`, where escaping only `&`, `<` and `>` lets a value close
+ * the attribute and add its own. The order matters: `&` first, or the entities
+ * the later replacements introduce get escaped again.
+ *
+ * Neither quote changes what a reader sees -- `&quot;` and `&#39;` render as
+ * `"` and `'` -- so this is the same page with the hole closed.
+ */
 function esc(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 /**
