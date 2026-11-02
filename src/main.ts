@@ -1265,9 +1265,24 @@ function initExhibit3(): void {
     svgContent += `<rect id="e3-overlay" x="${padL}" y="${padT}" width="${chartW}" height="${chartH}" fill="transparent" style="cursor:crosshair"/>`;
 
     const algStatusText = algoName === 'AES-128' ? 'current NIST use permitted; hypothetical scaling' : algInfo?.broken ? 'broken (Shor-vulnerable)' : algInfo?.longTermSafe ? 'quantum-safe' : 'partially affected';
+    const curveKind = algoName === 'AES-128'
+      ? 'Hypothetical 0.5 scaling exercise, not an AES decryption probability'
+      : 'Historical illustrative exposure probability curve';
+    // The accessible title is the one string here taken from the DOM (the
+    // algorithm select's value), so it is written as TEXT rather than parsed as
+    // markup. Everything interpolated below is a number or a literal from this
+    // file. Escaping it would also have been safe, but this keeps the value off
+    // the HTML-parsing path altogether, which is what the title element wants
+    // anyway -- SVG <title> holds text, not elements.
     chartEl.innerHTML = `<svg viewBox="0 0 ${svgW} ${svgH}" style="width:100%;display:block" role="img" aria-labelledby="e3-chart-title">
-      <title id="e3-chart-title">${algoName === 'AES-128' ? 'Hypothetical 0.5 scaling exercise, not an AES decryption probability' : 'Historical illustrative exposure probability curve'} for ${esc(algoName)} (${esc(algStatusText)}), showing modelled survey-based scenarios from ${CURRENT_YEAR} to ${CURRENT_YEAR + horizonYears} across 4 CRQC scenarios</title>
+      <title id="e3-chart-title"></title>
       ${svgContent}</svg><div class="chart-tooltip" id="e3-tooltip" role="tooltip" aria-hidden="true"></div>`;
+    const chartTitleEl = chartEl.querySelector('#e3-chart-title');
+    if (chartTitleEl) {
+      chartTitleEl.textContent =
+        `${curveKind} for ${algoName} (${algStatusText}), showing modelled survey-based scenarios ` +
+        `from ${CURRENT_YEAR} to ${CURRENT_YEAR + horizonYears} across 4 CRQC scenarios`;
+    }
 
     legendEl.innerHTML = legendItems.join('');
 
