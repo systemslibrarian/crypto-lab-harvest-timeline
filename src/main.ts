@@ -1,4 +1,5 @@
 import './style.css';
+import { esc } from './escape.ts';
 import {
   CURRENT_YEAR,
   SURVEY_YEAR,
@@ -39,14 +40,7 @@ import {
  * Neither quote changes what a reader sees -- `&quot;` and `&#39;` render as
  * `"` and `'` -- so this is the same page with the hole closed.
  */
-function esc(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
+
 
 /**
  * Build <optgroup>-grouped <option> HTML for the algorithm catalog, split into
