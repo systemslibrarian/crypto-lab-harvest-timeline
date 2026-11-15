@@ -169,3 +169,13 @@ CI runs `npm test` and `npm run build` on every push and PR to `main`. The
 ## Research update — 28 October 2026
 
 [NIST IR 8547](https://csrc.nist.gov/pubs/ir/8547/final) was published as a final report on 27 October 2026. The risk-boundary and methodology notes now cite the final report, §§3–3.1.3. Confidentiality and signature migration remain separate; no risk-calculator formulas changed.
+
+## Citation review — 15 November 2026
+
+Four standards citations named the wrong document.
+
+Three pointed at **NIST SP 1800-38B**, which is *Quantum Readiness: Cryptographic Discovery* — the NCCoE practice guide on discovery tooling (Volume B of the SP 1800-38 *Migration to Post-Quantum Cryptography* series, alongside Volume C, *Quantum Readiness: Testing Draft Standards for Interoperability and Performance*). Volume B gives neither a hybrid TLS recommendation nor migration timelines. Exhibit 4's source line now attributes the per-organization migration durations to the lab itself as planning estimates and cites [NIST IR 8547](https://csrc.nist.gov/pubs/ir/8547/final) §4, *Toward a PQC Standards Transition Timeline*, for the deadlines (quantum-vulnerable public-key cryptography deprecated after 2030, disallowed after 2035). The hybrid key-agreement row now cites IR 8547 §3.2.1, which allows the generic composite mode — an SP 800-56C key derivation over a classical shared secret concatenated with a FIPS 203 one. SP 1800-38B keeps a correctly titled entry under Government Guidance rather than under the 2024 standards list.
+
+The fourth said LMS or XMSS are "CNSA 2.0 required for firmware signing". In the NSA CNSA 2.0 FAQ (U/OO/6072712-26 | PP-26-3194, October 2026 Ver. 2.2) the LMS/XMSS row sits under "Algorithms Allowed in Specific Applications" and reads "All parameters approved for all classification levels. LMS SHA-256/192 is recommended." Asked "Can I use ML-DSA for firmware or software signing?" the FAQ answers "Yes, however, firmware roots of trust are a critical component to upgrade… Given validated LMS and XMSS have been commercially available longer, NSA wants to ensure this transition can begin now (using LMS and XMSS) whenever possible, rather than wait for ML-DSA", and "Validated ML-DSA is approved for all signing use cases". The bullet now says recommended-and-available-now rather than required, and notes ML-DSA is approved for firmware too.
+
+`tests/ui.test.ts` gates all four statements against the mounted DOM.

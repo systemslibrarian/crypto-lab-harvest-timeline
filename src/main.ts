@@ -1559,7 +1559,9 @@ function initExhibit4(): void {
         starting now means completing by <strong>${CURRENT_YEAR + profile.typicalMigrationYears}</strong>.
         <br><br>
         <em>Source: Mosca &amp; Piani, GRI/evolutionQ Quantum Threat Timeline Report 2024.
-        Migration timelines from NIST SP 1800-38B and vendor analyses.</em>
+        The per-organization migration durations are illustrative planning estimates, not NIST figures.
+        For the standards deadlines see <a href="https://csrc.nist.gov/pubs/ir/8547/final" target="_blank" rel="noopener">NIST IR 8547, final report (27 October 2026), §4</a>:
+        quantum-vulnerable public-key cryptography is deprecated after 2030 and disallowed after 2035.</em>
       </div>`;
 
     contentEl.querySelectorAll<HTMLTableCellElement>('th[data-sort]').forEach((th) => {
@@ -1607,7 +1609,7 @@ function renderExhibit5(): string {
         <li>Design for <strong>crypto-agility</strong>: abstract all crypto behind an interface so algorithms can be swapped</li>
         <li>For long-lived confidentiality, migrate classical RSA key transport and X25519 key agreement. Separately plan migration of RSA, ECDSA and Ed25519 signing for future authenticity.</li>
         <li>For messaging: use Signal Protocol V2 design (hybrid X25519+ML-KEM) or MLS protocol with PQC</li>
-        <li>For firmware/IoT: use LMS or XMSS (stateful hash-based — CNSA 2.0 required for firmware signing)</li>
+        <li>For firmware/IoT: LMS or XMSS (stateful hash-based) — CNSA 2.0 recommends LMS SHA-256/192 and wants firmware transitions beginning now with LMS/XMSS, while ML-DSA is approved for all signing use cases, firmware included</li>
       </ul>
     </div>
 
@@ -1655,7 +1657,7 @@ function renderExhibit5(): string {
             <span class="algo-recommended">X25519 + ML-KEM-768 hybrid</span><br>
             <span class="algo-recommended">AES-256-GCM</span>
           </td>
-          <td>Use hybrid key agreement: classical X25519 for today's security + ML-KEM-768 for quantum safety. Same approach as NIST SP 1800-38B hybrid TLS recommendation.</td>
+          <td>Use hybrid key agreement: classical X25519 for today's security + ML-KEM-768 for quantum safety. <a href="https://csrc.nist.gov/pubs/ir/8547/final" target="_blank" rel="noopener">NIST IR 8547 §3.2.1</a> allows this composite mode — an SP 800-56C key derivation over a classical shared secret concatenated with the FIPS 203 one.</td>
         </tr>
         <tr>
           <td>Media attachments<br><small style="color:var(--color-text-muted)">(voice prayers, photos)</small></td>
@@ -2116,15 +2118,15 @@ function buildApp(): void {
           <li><a href="https://csrc.nist.gov/pubs/fips/203/final" target="_blank" rel="noopener"><strong>FIPS 203</strong></a> — ML-KEM, shared-secret establishment for encryption (final, 13 August 2024).</li>
           <li><a href="https://csrc.nist.gov/pubs/fips/204/final" target="_blank" rel="noopener"><strong>FIPS 204</strong></a> — ML-DSA, authenticity and integrity (final, 13 August 2024).</li>
           <li><strong>FIPS 205</strong> — SLH-DSA (Hash-Based Signature).</li>
-          <li><strong>SP 1800-38B</strong> — Migrating to Post-Quantum Cryptography.</li>
         </ul>
       </div>
       <div>
         <h3>Government Guidance</h3>
         <ul>
-          <li><strong>NSA CNSA 2.0 (2022)</strong> — Commercial National Security Algorithm Suite 2.0.</li>
+          <li><strong>NSA CNSA 2.0 (2022)</strong> — Commercial National Security Algorithm Suite 2.0; firmware guidance per the CNSA 2.0 FAQ (October 2026 Ver. 2.2).</li>
           <li><strong>IETF RFC 8391</strong> — XMSS hash-based signatures.</li>
           <li><strong>NIST SP 800-208</strong> — Stateful hash-based signature schemes.</li>
+          <li><strong>NIST SP 1800-38B</strong> — <em>Quantum Readiness: Cryptographic Discovery</em>, an NCCoE practice guide (Volume B of the SP 1800-38 migration series). It covers discovery tooling, not hybrid TLS or migration timelines.</li>
         </ul>
       </div>
       <div>

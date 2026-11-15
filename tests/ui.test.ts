@@ -202,3 +202,45 @@ describe('UI smoke — Exhibit 3 exposure chart', () => {
     window.dispatchEvent(new Event('resize'));
   });
 });
+
+// Citation gate. These four statements each named NIST SP 1800-38B or called
+// LMS/XMSS "required"; SP 1800-38B is *Quantum Readiness: Cryptographic
+// Discovery* and gives neither hybrid TLS nor timelines, and the CNSA 2.0 FAQ
+// recommends LMS/XMSS rather than requiring them.
+describe('standards citations', () => {
+  const pageText = (): string => (document.body.textContent ?? '').replace(/\s+/g, ' ');
+
+  it('cites NIST IR 8547 for the migration deadlines, not SP 1800-38B', () => {
+    const note = document.getElementById('e4-content')?.textContent?.replace(/\s+/g, ' ') ?? '';
+    expect(note).toContain('illustrative planning estimates, not NIST figures');
+    expect(note).toContain('NIST IR 8547, final report (27 October 2026), §4');
+    expect(note).toContain('deprecated after 2030 and disallowed after 2035');
+    expect(note).not.toContain('1800-38B');
+  });
+
+  it('cites NIST IR 8547 §3.2.1 for hybrid key establishment', () => {
+    const text = pageText();
+    expect(text).toContain('NIST IR 8547 §3.2.1');
+    expect(text).toContain('SP 800-56C key derivation');
+    expect(text).not.toContain('SP 1800-38B hybrid TLS');
+  });
+
+  it('says CNSA 2.0 recommends LMS/XMSS for firmware rather than requiring them', () => {
+    const text = pageText();
+    expect(text).toContain('CNSA 2.0 recommends LMS SHA-256/192');
+    expect(text).toContain('ML-DSA is approved for all signing use cases, firmware included');
+    expect(text).not.toContain('CNSA 2.0 required for firmware signing');
+  });
+
+  it('lists SP 1800-38B under government guidance with its real title', () => {
+    const text = pageText();
+    expect(text).toContain('Quantum Readiness: Cryptographic Discovery');
+    expect(text).toContain('discovery tooling, not hybrid TLS or migration timelines');
+    // It is an NCCoE practice guide, so it must not sit in the 2024 standards list.
+    const standards = Array.from(document.querySelectorAll('h3'))
+      .find((h) => (h.textContent ?? '').includes('NIST PQC Standards'))
+      ?.nextElementSibling?.textContent ?? '';
+    expect(standards).toContain('FIPS 203');
+    expect(standards).not.toContain('1800-38B');
+  });
+});
