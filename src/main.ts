@@ -1608,7 +1608,7 @@ function renderExhibit5(): string {
         <li>Use <strong>ML-DSA-65</strong> or <strong>SLH-DSA</strong> for signatures (NIST FIPS 204/205, 2024)</li>
         <li>Design for <strong>crypto-agility</strong>: abstract all crypto behind an interface so algorithms can be swapped</li>
         <li>For long-lived confidentiality, migrate classical RSA key transport and X25519 key agreement. Separately plan migration of RSA, ECDSA and Ed25519 signing for future authenticity.</li>
-        <li>For messaging: use Signal Protocol V2 design (hybrid X25519+ML-KEM) or MLS protocol with PQC</li>
+        <li>For messaging: use Signal's <strong>PQXDH</strong> initial key agreement (<a href="https://signal.org/docs/specifications/pqxdh/" target="_blank" rel="noopener">spec Revision 3, 2023-05-24, last updated 2024-01-23</a>) with the <strong>Triple Ratchet</strong>, which mixes a Sparse Post Quantum Ratchet (SPQR, ML-KEM-768) into the Double Ratchet (<a href="https://signal.org/blog/spqr/" target="_blank" rel="noopener">announced 2 October 2025</a>), or MLS protocol with PQC</li>
         <li>For firmware/IoT: LMS or XMSS (stateful hash-based) — CNSA 2.0 recommends LMS SHA-256/192 and wants firmware transitions beginning now with LMS/XMSS, while ML-DSA is approved for all signing use cases, firmware included</li>
       </ul>
     </div>
@@ -1653,11 +1653,11 @@ function renderExhibit5(): string {
           <td>Partner messages<br><small style="color:var(--color-text-muted)">(prayer partner chat)</small></td>
           <td>Indefinite (E2E)</td>
           <td>
-            <span class="algo-recommended">Signal Protocol V2</span><br>
+            <span class="algo-recommended">Signal PQXDH + Triple Ratchet</span><br>
             <span class="algo-recommended">X25519 + ML-KEM-768 hybrid</span><br>
             <span class="algo-recommended">AES-256-GCM</span>
           </td>
-          <td>Use hybrid key agreement: classical X25519 for today's security + ML-KEM-768 for quantum safety. <a href="https://csrc.nist.gov/pubs/ir/8547/final" target="_blank" rel="noopener">NIST IR 8547 §3.2.1</a> allows this composite mode — an SP 800-56C key derivation over a classical shared secret concatenated with the FIPS 203 one.</td>
+          <td>Use hybrid key agreement: classical X25519 for today's security + ML-KEM-768 for quantum safety. <a href="https://csrc.nist.gov/pubs/ir/8547/final" target="_blank" rel="noopener">NIST IR 8547 §3.2.1</a> allows this composite mode — an SP 800-56C key derivation over a classical shared secret concatenated with the FIPS 203 one. Signal's own deployment pairs PQXDH for session setup — X25519 with CRYSTALS-Kyber, per its <a href="https://signal.org/blog/pqxdh/" target="_blank" rel="noopener">19 September 2023 announcement</a> — with the Triple Ratchet, which runs the Sparse Post Quantum Ratchet (SPQR, ML-KEM-768) alongside the Double Ratchet (<a href="https://signal.org/blog/spqr/" target="_blank" rel="noopener">2 October 2025</a>).</td>
         </tr>
         <tr>
           <td>Media attachments<br><small style="color:var(--color-text-muted)">(voice prayers, photos)</small></td>

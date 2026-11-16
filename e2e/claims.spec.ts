@@ -97,3 +97,48 @@ test('the cost-of-delay headline agrees with its own table', async ({ page }) =>
     }
   }
 });
+
+/**
+ * Exhibit 5 used to recommend a "Signal Protocol V2" with a hybrid
+ * X25519+ML-KEM design. No Signal publication describes such a protocol.
+ * Signal's published post-quantum work is PQXDH for the initial key agreement
+ * and the Triple Ratchet, which mixes the Sparse Post Quantum Ratchet (SPQR)
+ * into the Double Ratchet. Each name below must stay tied to the dated source
+ * it came from. Sources read 15 November 2026:
+ *   - https://signal.org/docs/specifications/pqxdh/ — "The PQXDH Key Agreement
+ *     Protocol", Revision 3, 2023-05-24, Last Updated: 2024-01-23.
+ *   - https://signal.org/blog/pqxdh/ — "Quantum Resistance and the Signal
+ *     Protocol", 19 Sep 2023, the PQXDH deployment announcement (X25519 with
+ *     CRYSTALS-Kyber).
+ *   - https://signal.org/blog/spqr/ — "Signal Protocol and Post-Quantum
+ *     Ratchets", 02 Oct 2025, introducing SPQR and the Triple Ratchet.
+ */
+test('the messaging recommendation names protocols Signal has published, with their dates', async ({ page }) => {
+  await page.goto('.');
+
+  // A protocol that does not exist must not come back anywhere on the page.
+  const whole = (await page.locator('body').textContent()) ?? '';
+  expect(whole, 'no Signal publication describes a "Signal Protocol V2"').not.toContain('Signal Protocol V2');
+
+  const exhibit = page.locator('#exhibit-5');
+  const text = ((await exhibit.textContent()) ?? '').replace(/ /g, ' ').replace(/\s+/g, ' ').trim();
+
+  // The real protocol names, in Signal's own spelling.
+  expect(text).toContain('PQXDH');
+  expect(text).toContain('Triple Ratchet');
+  expect(text).toContain('Sparse Post Quantum Ratchet');
+
+  // Every replacement claim carries the date of the source it rests on.
+  expect(text, 'PQXDH spec revision and last-updated dates').toContain('Revision 3, 2023-05-24, last updated 2024-01-23');
+  expect(text, 'PQXDH deployment announcement date').toContain('19 September 2023');
+  expect(text, 'SPQR / Triple Ratchet announcement date').toContain('2 October 2025');
+
+  // ...and links to that source, not to a protocol page that does not exist.
+  for (const href of [
+    'https://signal.org/docs/specifications/pqxdh/',
+    'https://signal.org/blog/pqxdh/',
+    'https://signal.org/blog/spqr/',
+  ]) {
+    await expect(exhibit.locator(`a[href="${href}"]`), `${href} must be cited`).not.toHaveCount(0);
+  }
+});
