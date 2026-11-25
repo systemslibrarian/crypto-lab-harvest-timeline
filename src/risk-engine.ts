@@ -554,14 +554,14 @@ export function assessRisk(
     recommendation =
       (marginYears === 0
         ? 'At the planning boundary (X + Y = Z): no spare time; strict exposure is not established.'
-        : `EXPOSED by ${Math.abs(marginYears).toFixed(0)} years.`) +
+        : `Planning shortfall of ${Math.abs(marginYears).toFixed(0)} years.`) +
       ' Begin PQC migration immediately. Use hybrid classical+ML-KEM-768 for new data.' +
       ' Prioritize fresh protection for high-value assets; previously copied ciphertext cannot be recalled.';
     recommendedAction = 'urgent_migration';
   } else {
     // critical
     recommendation =
-      `CRITICAL: Exposed by ${Math.abs(marginYears).toFixed(0)} years.` +
+      `Critical planning shortfall of ${Math.abs(marginYears).toFixed(0)} years.` +
       ' Recorded ciphertext remains at risk after a future CRQC.' +
       ' Migrate key establishment to an appropriate ML-KEM or hybrid profile; plan signature migration separately.';
     recommendedAction = 'emergency_migration';

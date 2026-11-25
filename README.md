@@ -93,6 +93,8 @@ Above the exhibits, a **"How the harvest works" mini-timeline** grounds *why* X 
 ### Exhibit 1 — Personal Risk Calculator
 Interactive single-asset Mosca Inequality calculator. Choose a data type, algorithm, data lifetime (X), migration time (Y), and CRQC scenario (Z). Results update live. A **live plain-English sentence** re-narrates the cause-and-effect on every slider move ("Your medical records must stay secret for 30 yrs; you need 5 yrs to migrate; a CRQC likely arrives in 12 yrs — so 35 > 12, exposed for 23 years"), above the visual X+Y vs Z bar and a specific recommendation. The algorithm status badge glosses the **Shor/Grover** mechanism inline.
 
+For example, a five-year record encrypted in 2026 expires in 2031. If migration takes ten years and a CRQC arrives in 2038, the migration plan falls three years short. That particular record has zero years of remaining sensitivity at arrival. Records created later during migration can still be affected.
+
 ### Exhibit 2 — Organization Risk Profile
 Multi-asset dashboard for 5 preset organizations (small medical clinic, mid-size bank, government intelligence agency, tech startup, research university). Shows per-asset confidentiality risk, aggregate TB exposure, and priority migration order. It does not count signature-only vulnerabilities as decryptable TB.
 

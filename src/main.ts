@@ -495,7 +495,7 @@ function initExhibit1(): void {
       ? `Your <strong>${dtName}</strong> must stay secret for <span class="hl-x">${X} yrs</span>; ` +
         `you need <span class="hl-y">${Y} yrs</span> to migrate; the ` +
         `model assumes a <span class="gloss-inline">CRQC</span> arrives in <span class="hl-z">${Z} yrs</span> (${CURRENT_YEAR + Z}) — ` +
-        `so <strong>${X} + ${Y} = ${X + Y} &gt; ${Z}</strong>, and your data is exposed for <strong>${Math.abs(margin).toFixed(0)} years</strong>.`
+        `so <strong>${X} + ${Y} = ${X + Y} &gt; ${Z}</strong>, a planning shortfall of <strong>${Math.abs(margin).toFixed(0)} years</strong>.`
       : boundary
         ? `Your <strong>${dtName}</strong> must stay secret for <span class="hl-x">${X} yrs</span>; ` +
           `you need <span class="hl-y">${Y} yrs</span> to migrate; the model assumes a ` +
@@ -513,10 +513,10 @@ function initExhibit1(): void {
         <div class="row"><span class="label">Y (migration time)</span><span class="value" style="color:var(--color-migration)">${Y} years</span></div>
         <div class="row"><span class="label">Z (CRQC arrival)</span><span class="value" style="color:var(--color-crqc)">${Z} years (${CURRENT_YEAR + Z})</span></div>
         <div class="row"><span class="label">X + Y</span><span class="value">${X + Y} years ${inequalityCrossed ? '&gt;' : boundary ? '=' : '&lt;'} Z = ${Z}</span></div>
-        <div class="row"><span class="label">${noModeledDecryption ? 'Decryption exposure' : exposed ? 'Exposure' : 'Margin'}</span><span class="value" style="color:${exposed ? 'var(--color-critical)' : 'var(--color-safe)'}">${noModeledDecryption ? 'Not established by this timing' : `${exposed ? '−' : '+'}${Math.abs(margin).toFixed(0)} years`}</span></div>
+        <div class="row"><span class="label">${noModeledDecryption ? 'Decryption exposure' : exposed ? 'Planning shortfall' : 'Planning margin'}</span><span class="value" style="color:${exposed ? 'var(--color-critical)' : 'var(--color-safe)'}">${noModeledDecryption ? 'Not established by this timing' : `${Math.abs(margin).toFixed(0)} years`}</span></div>
       </div>
       <div class="mosca-bar-container" role="img"
-           aria-label="X+Y of ${X + Y} years versus CRQC arrival in ${Z} years — ${noModeledDecryption ? 'timing does not establish decryption exposure for this choice' : exposed ? 'exposed by ' + Math.abs(margin).toFixed(0) + ' years' : boundary ? 'at the planning boundary with no spare time; strict exposure is not established' : 'positive margin of ' + margin.toFixed(0) + ' years'}">
+           aria-label="X+Y of ${X + Y} years versus CRQC arrival in ${Z} years — ${noModeledDecryption ? 'timing does not establish decryption exposure for this choice' : exposed ? 'planning shortfall of ' + Math.abs(margin).toFixed(0) + (margin === -1 ? ' year' : ' years') : boundary ? 'at the planning boundary with no spare time; strict exposure is not established' : 'positive margin of ' + margin.toFixed(0) + ' years'}">
         <div class="mosca-bar-xy" style="width:${pctXYsafe}%;">
           <div class="seg-x" style="width:${(pctX / pctXYsafe) * 100}%;" title="X = ${X} years (data lifetime)"></div>
           <div class="seg-y" style="width:${(pctY / pctXYsafe) * 100}%;" title="Y = ${Y} years (migration time)"></div>
@@ -537,7 +537,7 @@ function initExhibit1(): void {
             ? `Data encrypted today stays sensitive for <strong>${X} years</strong>. <br>
                You need <strong>${Y} years</strong> to migrate. <br>
                Modelled CRQC arrival in <strong>${Z} years</strong> (${CURRENT_YEAR + Z}). <br>
-               Exposure window: <strong>${Math.abs(margin).toFixed(0)} years</strong> of potential decryption.`
+               For a record encrypted today, <strong>${result.exposureWindow.duration} years</strong> of sensitivity remain after that arrival. This is the potential decryption window for that record.`
             : boundary
               ? 'At the planning boundary: no spare time. Strict exposure is not established; this is not a safety guarantee.'
             : `Margin of <strong>${margin.toFixed(0)} years</strong> before CRQC threat arrives. <br>
@@ -941,13 +941,14 @@ function initExhibit2(): void {
     const header = [
       'Organization',
       'CRQC Scenario',
-      'CRQC Year (Z)',
+      'CRQC arrival year',
       'Asset',
       'Algorithm',
       'Data Lifetime X (yrs)',
       'Migration Time Y (yrs)',
       'X + Y',
-      'Exposed (X+Y > Z)',
+      'Timing threshold crossed (X+Y > Z)',
+      'Modeled decryption exposure',
       'Margin Years',
       'Risk Level',
       'Action',
@@ -963,6 +964,7 @@ function initExhibit2(): void {
       String(a.moscaInequality.Y),
       String(a.moscaInequality.X + a.moscaInequality.Y),
       a.moscaInequality.exposed ? 'YES' : 'NO',
+      a.moscaInequality.exposed && a.riskLevel !== 'none' ? 'YES' : 'NO',
       a.moscaInequality.marginYears.toFixed(0),
       a.riskLevel,
       a.recommendedAction,
@@ -974,6 +976,7 @@ function initExhibit2(): void {
       '',
       '',
       'TOTAL',
+      '',
       '',
       '',
       '',
@@ -1437,7 +1440,7 @@ function initExhibit4(): void {
       exposedAssets: number;
       exposedDataTB: number;
       pctExposed: number;
-      missesWindow: boolean;
+      arrivalOffset: number;
       /**
        * Years the migration finishes AFTER a CRQC arrives. Exposure counts are
        * per-asset booleans (Mosca: X + Y > Z), so once every at-risk asset is
@@ -1460,7 +1463,7 @@ function initExhibit4(): void {
         exposedAssets: result.exposedAssets,
         exposedDataTB: result.exposedDataTB,
         pctExposed: totalTB > 0 ? (result.exposedDataTB / totalTB) * 100 : 0,
-        missesWindow: completeYear > crqcYear,
+        arrivalOffset: completeYear - crqcYear,
         windowYears: Math.max(0, completeYear - crqcYear),
       };
     });
@@ -1473,7 +1476,7 @@ function initExhibit4(): void {
         tb:       r => r.exposedDataTB,
         pct:      r => r.pctExposed,
         window:   r => r.windowYears,
-        miss:     r => r.missesWindow ? 1 : 0,
+        miss:     r => r.arrivalOffset,
       };
       const dir = sortDir === 'asc' ? 1 : -1;
       const fn = keyFn[sortKey];
@@ -1495,7 +1498,7 @@ function initExhibit4(): void {
         <td class="${exposedClass}">${r.exposedDataTB.toFixed(1)} TB</td>
         <td class="${exposedClass}">${r.pctExposed.toFixed(0)}%</td>
         <td class="${r.windowYears > 0 ? 'delay-cell-danger' : 'delay-cell-safe'}">${r.windowYears === 0 ? '0' : `+${r.windowYears}`} yr</td>
-        <td style="color:${r.missesWindow ? 'var(--color-danger)' : 'var(--color-safe)'};">${r.missesWindow ? '⚠ MISS' : '✓ BEAT'} CRQC</td>
+        <td style="color:${r.arrivalOffset > 0 ? 'var(--color-danger)' : r.arrivalOffset < 0 ? 'var(--color-safe)' : 'inherit'};">${r.arrivalOffset > 0 ? '⚠ MISS CRQC' : r.arrivalOffset < 0 ? '✓ BEAT CRQC' : 'AT ARRIVAL'}</td>
       </tr>`;
     });
 

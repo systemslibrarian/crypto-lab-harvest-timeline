@@ -28,6 +28,40 @@ test('HNDL choices and profiles show confidentiality risk, not signature decrypt
   await expect(page.locator('#e2-content table')).not.toContainText('Ed25519 + AES-256');
 });
 
+test('the planning shortfall and the lifetime of a record encrypted today are distinct', async ({ page }) => {
+  await page.goto('./?algo=RSA-2048&x=5&y=10&z=median');
+  await expect(page.locator('#e1-result .plain-sentence')).toContainText('planning shortfall of 3 years');
+  await expect(page.locator('#e1-result .verdict-detail')).toContainText('record encrypted today, 0 years');
+
+  await page.locator('#e4-org').selectOption({ index: 0 });
+  await page.locator('#e4-scenario').selectOption('aggressive');
+  const row = page.locator('#e4-content tbody tr').filter({ hasText: 'Start 2028' });
+  await expect(row.locator('td').nth(1)).toHaveText('2033');
+  await expect(row.locator('td').last()).toHaveText('AT ARRIVAL');
+});
+
+test('the CSV distinguishes a crossed timing threshold from modeled decryption exposure', async ({ page }) => {
+  await page.goto('.');
+  await page.locator('#e2-org').selectOption({ index: 0 });
+  await page.locator('#e2-scenario').selectOption('median');
+  const downloadPromise = page.waitForEvent('download');
+  await page.locator('#e2-csv').click();
+  const stream = await (await downloadPromise).createReadStream();
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream!) chunks.push(chunk);
+  const lines = Buffer.concat(chunks).toString('utf8').split(/\r?\n/);
+  const headers = lines[0].split(',');
+  const timing = headers.indexOf('Timing threshold crossed (X+Y > Z)');
+  const decryption = headers.indexOf('Modeled decryption exposure');
+  expect(timing).toBeGreaterThanOrEqual(0);
+  expect(decryption).toBeGreaterThanOrEqual(0);
+  // The first ten columns contain no quoted commas in these two fixture rows.
+  const backup = lines.find(line => line.includes(',Backup archives,'))!.split(',');
+  expect([backup[timing], backup[decryption]]).toEqual(['YES', 'NO']);
+  const patient = lines.find(line => line.includes(',Patient EHR database,'))!.split(',');
+  expect([patient[timing], patient[decryption]]).toEqual(['YES', 'YES']);
+});
+
 /**
  * Exhibit 4's headline used to read "Every year of delay increases the exposure
  * window" over a table whose exposure columns were flat across all five delay
