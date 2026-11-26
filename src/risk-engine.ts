@@ -506,6 +506,10 @@ function computeRiskLevel(
   return 'critical';
 }
 
+export function formatYears(years: number): string {
+  return `${years} ${years === 1 ? 'year' : 'years'}`;
+}
+
 export function assessRisk(
   assetName: string,
   algorithm: string,
@@ -523,19 +527,22 @@ export function assessRisk(
   const exposed = X + Y > Z;
   const marginYears = Z - (X + Y);
 
-  const riskLevel = computeRiskLevel(algInfo, X, Y, Z);
+  const riskLevel = X === 0 ? 'none' : computeRiskLevel(algInfo, X, Y, Z);
 
   // Exposure window: the period during which harvested data can be decrypted
   // Starts at CRQC arrival (or earlier if already past), ends at data expiry
   const dataExpiryYear = today + X;
-  const startYear = Math.min(crqcYear, dataExpiryYear);
+  const startYear = riskLevel === 'none' ? dataExpiryYear : Math.min(crqcYear, dataExpiryYear);
   const endYear = dataExpiryYear;
   const duration = Math.max(0, endYear - startYear);
 
   let recommendation: string;
   let recommendedAction: RiskAssessment['recommendedAction'];
 
-  if (riskLevel === 'none') {
+  if (X === 0) {
+    recommendation = 'This record has no confidentiality lifetime after encryption. Assess records that still require secrecy separately.';
+    recommendedAction = 'monitor';
+  } else if (riskLevel === 'none') {
     recommendation = algInfo.algorithm === 'AES-128'
       ? 'NIST currently permits AES-128. The idealized Grover query bound is not a practical decryption forecast; do not replace AES-128 solely because of this CRQC timeline. Monitor NIST guidance.'
       : 'No retrospective decryption risk is modeled for this mechanism under the stated assumptions. Continue monitoring NIST PQC guidance.';
@@ -551,18 +558,18 @@ export function assessRisk(
       ' Prioritize deploying hybrid classical+PQC within 12-18 months.';
     recommendedAction = 'plan_migration';
   } else if (riskLevel === 'high') {
-    recommendation =
-      (marginYears === 0
-        ? 'At the planning boundary (X + Y = Z): no spare time; strict exposure is not established.'
-        : `EXPOSED by ${Math.abs(marginYears).toFixed(0)} years.`) +
+    let timing = 'At the planning boundary (X + Y = Z): no spare time; strict exposure is not established.';
+    if (marginYears > 0) timing = `Planning margin of ${formatYears(marginYears)}.`;
+    if (marginYears < 0) timing = `Planning shortfall of ${formatYears(-marginYears)}.`;
+    recommendation = timing +
       ' Begin PQC migration immediately. Use hybrid classical+ML-KEM-768 for new data.' +
       ' Prioritize fresh protection for high-value assets; previously copied ciphertext cannot be recalled.';
     recommendedAction = 'urgent_migration';
   } else {
     // critical
     recommendation =
-      `CRITICAL: Exposed by ${Math.abs(marginYears).toFixed(0)} years.` +
-      ' Recorded ciphertext remains at risk after a future CRQC.' +
+      `Critical planning shortfall of ${formatYears(-marginYears)}.` +
+      ' Assess the confidentiality lifetime of records encrypted before migration completes.' +
       ' Migrate key establishment to an appropriate ML-KEM or hybrid profile; plan signature migration separately.';
     recommendedAction = 'emergency_migration';
   }

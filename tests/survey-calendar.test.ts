@@ -31,3 +31,15 @@ describe('historical survey calendar and planning boundary', () => {
     expect(readme).not.toMatch(/most recent expert survey|most recent edition built on a survey/);
   });
 });
+
+
+it('separates a migration shortfall from the lifetime of a record encrypted today', () => {
+  const median = CRQC_SCENARIOS.find(scenario => scenario.label === 'median')!;
+  for (const [x, y, margin, duration] of [[9, 2, 1, 0], [10, 2, 0, 0], [11, 2, -1, 0], [22, 2, -12, 10]]) {
+    const record = assessRisk('record', 'RSA-2048', x, y, median);
+    expect(record.moscaInequality.marginYears).toBe(margin);
+    expect(record.exposureWindow.duration).toBe(duration);
+  }
+  expect(assessRisk('record', 'RSA-2048', 0, 20, median).riskLevel).toBe('none');
+  expect(assessRisk('record', 'AES-256', 22, 2, median).exposureWindow.duration).toBe(0);
+});

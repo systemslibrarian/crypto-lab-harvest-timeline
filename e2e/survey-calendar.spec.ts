@@ -9,10 +9,16 @@ for (const width of [1280, 390, 320]) {
     const x = page.locator('#e1-x');
     const y = page.locator('#e1-y');
     await y.evaluate(el => { (el as HTMLInputElement).value = '2'; el.dispatchEvent(new Event('input', { bubbles: true })); });
-    for (const [lifetime, phrase] of [[10, /planning boundary.*no spare time/i], [11, /exposed by 1 years/i], [9, /positive margin of 1 years/i]] as const) {
+    for (const [lifetime, phrase] of [[10, /planning boundary.*no spare time/i], [11, /planning shortfall of 1 year\b/i], [9, /positive margin of 1 year\b/i]] as const) {
       await x.evaluate((el, value) => { (el as HTMLInputElement).value = String(value); el.dispatchEvent(new Event('input', { bubbles: true })); }, lifetime);
       const bar = page.locator('#e1-result [role="img"]');
       await expect(bar).toHaveAttribute('aria-label', phrase);
+      const advice = page.locator('#e1-result .recommendation');
+      if (lifetime === 9) await expect(advice).toContainText('Planning margin of 1 year.');
+      if (lifetime === 11) {
+        await expect(advice).toContainText('Planning shortfall of 1 year.');
+        await expect(page.locator('#e1-result .verdict-detail')).toContainText('still requires secrecy is 0 years.');
+      }
       if (lifetime === 10) {
         await expect(page.locator('#e1-result')).toContainText('strict exposure is not established');
         await expect(page.locator('#e1-result')).not.toContainText('EXPOSED by 0');

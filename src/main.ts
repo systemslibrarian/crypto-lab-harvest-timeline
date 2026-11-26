@@ -8,6 +8,7 @@ import {
   CRQC_SCENARIOS,
   assessRisk,
   computeExposureCurve,
+  formatYears,
 } from './risk-engine.ts';
 import {
   PRESET_ORGANIZATIONS,
@@ -495,7 +496,7 @@ function initExhibit1(): void {
       ? `Your <strong>${dtName}</strong> must stay secret for <span class="hl-x">${X} yrs</span>; ` +
         `you need <span class="hl-y">${Y} yrs</span> to migrate; the ` +
         `model assumes a <span class="gloss-inline">CRQC</span> arrives in <span class="hl-z">${Z} yrs</span> (${CURRENT_YEAR + Z}) — ` +
-        `so <strong>${X} + ${Y} = ${X + Y} &gt; ${Z}</strong>, and your data is exposed for <strong>${Math.abs(margin).toFixed(0)} years</strong>.`
+        `so <strong>${X} + ${Y} = ${X + Y} &gt; ${Z}</strong>, giving a planning shortfall of <strong>${formatYears(-margin)}</strong>.`
       : boundary
         ? `Your <strong>${dtName}</strong> must stay secret for <span class="hl-x">${X} yrs</span>; ` +
           `you need <span class="hl-y">${Y} yrs</span> to migrate; the model assumes a ` +
@@ -504,7 +505,7 @@ function initExhibit1(): void {
       : `Your <strong>${dtName}</strong> must stay secret for <span class="hl-x">${X} yrs</span>; ` +
         `you finish migrating in <span class="hl-y">${Y} yrs</span>; the model assumes a ` +
         `<span class="gloss-inline">CRQC</span> arrives in <span class="hl-z">${Z} yrs</span> (${CURRENT_YEAR + Z}) — ` +
-        `so <strong>${X} + ${Y} = ${X + Y} ≤ ${Z}</strong>, with <strong>${margin.toFixed(0)} years</strong> of margin to spare.`;
+        `so <strong>${X} + ${Y} = ${X + Y} ≤ ${Z}</strong>, with <strong>${formatYears(margin)}</strong> of margin to spare.`;
 
     resultEl.innerHTML = `
       <p class="plain-sentence ${exposed ? 'exposed' : 'safe'}">${plainSentence}</p>
@@ -513,10 +514,10 @@ function initExhibit1(): void {
         <div class="row"><span class="label">Y (migration time)</span><span class="value" style="color:var(--color-migration)">${Y} years</span></div>
         <div class="row"><span class="label">Z (CRQC arrival)</span><span class="value" style="color:var(--color-crqc)">${Z} years (${CURRENT_YEAR + Z})</span></div>
         <div class="row"><span class="label">X + Y</span><span class="value">${X + Y} years ${inequalityCrossed ? '&gt;' : boundary ? '=' : '&lt;'} Z = ${Z}</span></div>
-        <div class="row"><span class="label">${noModeledDecryption ? 'Decryption exposure' : exposed ? 'Exposure' : 'Margin'}</span><span class="value" style="color:${exposed ? 'var(--color-critical)' : 'var(--color-safe)'}">${noModeledDecryption ? 'Not established by this timing' : `${exposed ? '−' : '+'}${Math.abs(margin).toFixed(0)} years`}</span></div>
+        <div class="row"><span class="label">${noModeledDecryption ? 'Decryption exposure' : 'Planning margin'}</span><span class="value" style="color:${exposed ? 'var(--color-critical)' : 'var(--color-safe)'}">${noModeledDecryption ? 'Not established by this timing' : `${exposed ? '−' : '+'}${formatYears(Math.abs(margin))}`}</span></div>
       </div>
       <div class="mosca-bar-container" role="img"
-           aria-label="X+Y of ${X + Y} years versus CRQC arrival in ${Z} years — ${noModeledDecryption ? 'timing does not establish decryption exposure for this choice' : exposed ? 'exposed by ' + Math.abs(margin).toFixed(0) + ' years' : boundary ? 'at the planning boundary with no spare time; strict exposure is not established' : 'positive margin of ' + margin.toFixed(0) + ' years'}">
+           aria-label="X+Y of ${X + Y} years versus CRQC arrival in ${Z} years — ${noModeledDecryption ? 'timing does not establish decryption exposure for this choice' : exposed ? 'planning shortfall of ' + formatYears(-margin) : boundary ? 'at the planning boundary with no spare time; strict exposure is not established' : 'positive margin of ' + formatYears(margin)}">
         <div class="mosca-bar-xy" style="width:${pctXYsafe}%;">
           <div class="seg-x" style="width:${(pctX / pctXYsafe) * 100}%;" title="X = ${X} years (data lifetime)"></div>
           <div class="seg-y" style="width:${(pctY / pctXYsafe) * 100}%;" title="Y = ${Y} years (migration time)"></div>
@@ -530,17 +531,19 @@ function initExhibit1(): void {
         <div class="verdict-level">${riskIcon(result.riskLevel)} RISK: ${result.riskLevel.toUpperCase()}</div>
         <div class="verdict-detail">
           ${noModeledDecryption
-            ? algoName === 'AES-128'
+            ? X === 0
+              ? 'A zero-year confidentiality lifetime leaves no sensitive interval after encryption.'
+              : algoName === 'AES-128'
               ? 'NIST currently permits AES-128. The idealized Grover query bound is not a measured or forecast decryption attack; this CRQC arrival clock alone does not justify replacing AES-128.'
               : 'The chosen protection does not have a modeled retrospective decryption break from this CRQC arrival clock. Keep monitoring its assumptions and implementation.'
             : exposed
             ? `Data encrypted today stays sensitive for <strong>${X} years</strong>. <br>
                You need <strong>${Y} years</strong> to migrate. <br>
                Modelled CRQC arrival in <strong>${Z} years</strong> (${CURRENT_YEAR + Z}). <br>
-               Exposure window: <strong>${Math.abs(margin).toFixed(0)} years</strong> of potential decryption.`
+               For a record encrypted today, the potential decryption window while it still requires secrecy is <strong>${formatYears(result.exposureWindow.duration)}</strong>.`
             : boundary
               ? 'At the planning boundary: no spare time. Strict exposure is not established; this is not a safety guarantee.'
-            : `Margin of <strong>${margin.toFixed(0)} years</strong> before CRQC threat arrives. <br>
+            : `Margin of <strong>${formatYears(margin)}</strong> before CRQC threat arrives. <br>
                Data lifetime + migration completed before the assumed CRQC.`}
         </div>
       </div>
@@ -1715,7 +1718,7 @@ function initExhibit5(): void {
       <div class="result-verdict ${vulnerable.riskLevel}">
         <div class="verdict-level" style="font-size:0.95rem">${riskIcon(vulnerable.riskLevel)} If using RSA-2048</div>
         <div class="verdict-detail">X=50y + Y=3y = 53y &gt; Z=${vulnerable.moscaInequality.Z}y<br>
-        <strong>Exposed by ${Math.abs(vulnerable.moscaInequality.marginYears).toFixed(0)} years.</strong><br>
+        <strong>Planning shortfall of ${formatYears(-vulnerable.moscaInequality.marginYears)}.</strong><br>
         User's prayer history harvested today, decrypted when CRQC arrives.</div>
       </div>
       <div class="result-verdict ${safe.riskLevel}">
