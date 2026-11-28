@@ -3,6 +3,8 @@
 [![CI](https://github.com/systemslibrarian/crypto-lab-harvest-timeline/actions/workflows/ci.yml/badge.svg)](https://github.com/systemslibrarian/crypto-lab-harvest-timeline/actions/workflows/ci.yml)
 [![Deploy](https://github.com/systemslibrarian/crypto-lab-harvest-timeline/actions/workflows/deploy.yml/badge.svg)](https://github.com/systemslibrarian/crypto-lab-harvest-timeline/actions/workflows/deploy.yml)
 
+Exhibit 5 follows an email through two relays. It distinguishes each hop’s negotiated transport protection, policy on TLS failure, and end-to-end encryption of the body.
+
 ## What It Is
 
 This tool operationalizes the Harvest-Now-Decrypt-Later threat into concrete, quantified risk for specific data types, algorithms, and organizations. It is built around the **Mosca Inequality**:

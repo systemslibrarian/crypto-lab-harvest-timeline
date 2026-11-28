@@ -1613,6 +1613,14 @@ function renderExhibit5(): string {
       </ul>
     </div>
 
+    <section aria-labelledby="mail-route-title" class="tldr-panel">
+      <h4 id="mail-route-title">Worked example: follow an email through two relays</h4>
+      <p>Alice submits a message to her mail provider using hybrid TLS. The provider forwards it to Bob’s mail server using classical TLS. Each connection negotiates its own keys. Both servers can advertise hybrid support while this particular delivery still uses classical key agreement on the second hop.</p>
+      <p>Under the planner’s harvest-now-decrypt-later assumption, a recording of the second hop is exposed if its key agreement later becomes breakable. If delivery policy permits plaintext fallback and TLS is unavailable, that hop exposes the message immediately. An applicable, enforced MTA-STS policy requires authenticated TLS or deferred delivery. It does not require a post-quantum group.</p>
+      <p>End-to-end message encryption is a separate layer. A relay can see the encrypted message and routing information. Reading its body then also depends on the message encryption and how the recipient’s keys are protected. This two-hop example illustrates one possible delivery. It gives no estimate of how often providers negotiate hybrid TLS.</p>
+      <p><a href="https://www.rfc-editor.org/rfc/rfc3207.html#section-6" target="_blank" rel="noopener">SMTP STARTTLS and hop-by-hop protection</a> · <a href="https://www.rfc-editor.org/rfc/rfc8461.html#section-5" target="_blank" rel="noopener">MTA-STS policy enforcement</a></p>
+    </section>
+
     <h4 style="font-family:var(--font-mono);font-size:0.85rem;color:var(--color-crqc);margin-bottom:1rem;text-transform:uppercase;letter-spacing:0.06em">
       Example: PrayerWarriors — Ministry App Analysis
     </h4>
