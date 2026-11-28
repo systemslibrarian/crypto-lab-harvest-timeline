@@ -312,13 +312,18 @@ describe('DATA_TYPES catalog', () => {
 });
 
 describe('exposure curve teaching helpers', () => {
-  it('exposureAnchors flags the three directly-surveyed points as surveyed', () => {
+  it('exposureAnchors distinguishes survey coverage from reported numeric values', () => {
     const anchors = exposureAnchors(median);
     const surveyed = anchors.filter((a) => a.surveyed).map((a) => a.yearsFromSurvey);
-    expect(surveyed).toEqual([10, 15, 20]);
-    // origin and 30-year extrapolation are not survey points
+    expect(surveyed).toEqual([10, 15, 20, 30]);
     expect(anchors.find((a) => a.yearsFromSurvey === 0)?.surveyed).toBe(false);
-    expect(anchors.find((a) => a.yearsFromSurvey === 30)?.surveyed).toBe(false);
+    for (const scenario of CRQC_SCENARIOS) {
+      const points = exposureAnchors(scenario);
+      const reported = points.filter(p => p.reportedValue).map(p => p.yearsFromSurvey);
+      const expected = scenario.label === 'pessimistic' ? [10, 15, 20] : scenario.label === 'aggressive' ? [10] : [];
+      expect(reported).toEqual(expected);
+      expect(points.find(p => p.yearsFromSurvey === 30)?.prob).toBe(Math.min(0.99, scenario.probabilityBy20Years + 0.05));
+    }
   });
 
   it('surveyed anchor probs equal the scenario survey fields', () => {

@@ -68,7 +68,7 @@ export const CRQC_SCENARIOS: CRQCScenario[] = [
     probabilityBy20Years: 0.78, // modelled midpoint between the curves below and above
     description:
       'Median: midpoint between the optimistic and pessimistic readings of the same' +
-      ' GRI expert survey — the report itself plots this as a mid-point estimate',
+      ' GRI expert survey — the lab models values beyond ten years',
     citation: 'GRI/evolutionQ 2024, midpoint of the two published readings (modelled)',
   },
   {
@@ -555,14 +555,14 @@ export function assessRisk(
   } else if (riskLevel === 'medium') {
     recommendation =
       `Margin of ${marginYears.toFixed(0)} years. Begin PQC migration planning now.` +
-      ' Prioritize deploying hybrid classical+PQC within 12-18 months.';
+      ' As a teaching assumption, this scenario uses a 12–18 month planning target. Set an actual schedule from the asset inventory and deployment constraints.';
     recommendedAction = 'plan_migration';
   } else if (riskLevel === 'high') {
     let timing = 'At the planning boundary (X + Y = Z): no spare time; strict exposure is not established.';
     if (marginYears > 0) timing = `Planning margin of ${formatYears(marginYears)}.`;
     if (marginYears < 0) timing = `Planning shortfall of ${formatYears(-marginYears)}.`;
     recommendation = timing +
-      ' Begin PQC migration immediately. Use hybrid classical+ML-KEM-768 for new data.' +
+      ' Begin PQC migration immediately. Select a key-establishment profile appropriate for the system.' +
       ' Prioritize fresh protection for high-value assets; previously copied ciphertext cannot be recalled.';
     recommendedAction = 'urgent_migration';
   } else {
@@ -600,29 +600,28 @@ export function assessRisk(
  * Returns array of (year, probability) pairs.
  */
 /**
- * The historical survey-anchored probability points for a scenario, plus the synthetic
- * 30-year extrapolation the curve tails off to. The 10 / 15 / 20-year horizons
- * are the ones the GRI/evolutionQ 2024 survey actually asked about; the values
- * at them are that report's averaged estimates where it publishes them and this
- * demo's modelled midpoints otherwise (see CRQC_SCENARIOS). The 0y origin and
- * the 30y extrapolation are flagged with `surveyed:false`. Exposed so the UI can
- * draw the anchor horizons distinctly from the smoothed line between them.
+ * The 2024 survey asked about 5, 10, 15, 20 and 30 years. The chart omits
+ * five years and adds a synthetic origin. Survey coverage and the provenance
+ * of each scenario's numeric value are independent.
  */
 export interface ExposureAnchor {
   yearsFromSurvey: number;
   year: number;
   prob: number;
-  surveyed: boolean; // true = a horizon the 2024 expert survey asked about
+  surveyed: boolean;
+  reportedValue: boolean;
   label: string;
 }
 
 export function exposureAnchors(scenario: CRQCScenario): ExposureAnchor[] {
+  const pessimistic = scenario.label === 'pessimistic';
+  const reportedAtTen = pessimistic || scenario.label === 'aggressive';
   return [
-    { yearsFromSurvey: 0,  prob: 0,                              surveyed: false, label: '2024 synthetic origin (0%)' },
-    { yearsFromSurvey: 10, prob: scenario.probabilityBy10Years, surveyed: true,  label: '10-year survey estimate' },
-    { yearsFromSurvey: 15, prob: scenario.probabilityBy15Years, surveyed: true,  label: '15-year survey estimate' },
-    { yearsFromSurvey: 20, prob: scenario.probabilityBy20Years, surveyed: true,  label: '20-year survey estimate' },
-    { yearsFromSurvey: 30, prob: Math.min(0.99, scenario.probabilityBy20Years + 0.05), surveyed: false, label: '30-year extrapolation' },
+    { yearsFromSurvey: 0,  prob: 0,                              surveyed: false, reportedValue: false, label: '2024 synthetic origin (0%)' },
+    { yearsFromSurvey: 10, prob: scenario.probabilityBy10Years, surveyed: true, reportedValue: reportedAtTen, label: '10-year horizon' },
+    { yearsFromSurvey: 15, prob: scenario.probabilityBy15Years, surveyed: true, reportedValue: pessimistic, label: '15-year horizon' },
+    { yearsFromSurvey: 20, prob: scenario.probabilityBy20Years, surveyed: true, reportedValue: pessimistic, label: '20-year horizon' },
+    { yearsFromSurvey: 30, prob: Math.min(0.99, scenario.probabilityBy20Years + 0.05), surveyed: true, reportedValue: false, label: '30-year horizon, lab extrapolation' },
   ].map(anchor => ({ ...anchor, year: SURVEY_YEAR + anchor.yearsFromSurvey }));
 }
 

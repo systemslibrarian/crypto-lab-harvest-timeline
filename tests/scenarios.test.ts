@@ -66,6 +66,24 @@ describe('analyzeOrganization', () => {
     expect(a.aggregateRisk.totalDataTB).toBeCloseTo(sum, 5);
   });
 
+  it.each([
+    [9, 0, /little planning time/i],
+    [10, 0, /no spare planning time/i],
+    [11, 5, /100.0% of data/],
+  ] as const)('describes the portfolio boundary for lifetime %i', (lifetime, tb, headline) => {
+    const profile = { ...PRESET_ORGANIZATIONS[0], typicalMigrationYears: 2,
+      assets: [{ ...PRESET_ORGANIZATIONS[0].assets[0], dataLifetimeYears: lifetime, dataSizeTB: 5 }] };
+    const result = analyzeOrganization(profile, median);
+    expect(result.aggregateRisk.exposedDataTB).toBe(tb);
+    expect(result.topRecommendation).toMatch(headline);
+  });
+
+  it('selects CNSA parameters only for a portfolio with that profile', () => {
+    const nss = PRESET_ORGANIZATIONS.find(p => p.securityProfile === 'CNSA 2.0')!;
+    expect(analyzeOrganization(nss, median).topRecommendation).toMatch(/ML-KEM-1024.*ML-DSA-87/);
+    expect(analyzeOrganization({ ...nss, securityProfile: undefined }, median).topRecommendation).toMatch(/ML-KEM-768.*ML-DSA-65/);
+  });
+
   it('always returns a topRecommendation string', () => {
     for (const profile of PRESET_ORGANIZATIONS) {
       const a = analyzeOrganization(profile, median);

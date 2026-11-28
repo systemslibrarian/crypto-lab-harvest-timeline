@@ -856,7 +856,7 @@ function initExhibit2(): void {
 
     const contentEl = document.getElementById('e2-content') as HTMLElement;
     contentEl.innerHTML = `
-      <p style="margin-bottom:1rem;font-size:0.85rem;color:var(--color-text-muted)">${esc(profile.description)} — Migration horizon: ~${profile.typicalMigrationYears} years</p>
+      <p style="margin-bottom:1rem;font-size:0.85rem;color:var(--color-text-muted)">${esc(profile.description)} — Migration horizon: ~${profile.typicalMigrationYears} years. Asset volumes, lifetimes, migration times and risk-score cutoffs are illustrative planning assumptions.</p>
 
       <div class="aggregate-panel">
         <div class="agg-stat risk-score-stat" title="TB-weighted Mosca risk score (0 = safe, 100 = critical)">
@@ -873,7 +873,7 @@ function initExhibit2(): void {
         </div>
         <div class="agg-stat">
           <div class="stat-value" style="color:var(--color-safe)">${(aggregateRisk.totalDataTB - aggregateRisk.exposedDataTB).toFixed(1)} TB</div>
-          <div class="stat-label">Protected (${safePct}%)</div>
+          <div class="stat-label">Below or at the planning boundary (${safePct}%)</div>
         </div>
       </div>
 
@@ -897,7 +897,7 @@ function initExhibit2(): void {
           ${priorityList}
         </div>
         <div>
-          <div class="field-label" style="margin-bottom:0.5rem">Worst Exposed Asset</div>
+          <div class="field-label" style="margin-bottom:0.5rem">Highest-Priority Asset</div>
           <div style="font-size:0.85rem;color:var(--color-danger);font-family:var(--font-mono);padding:0.5rem 0">
             ${esc(aggregateRisk.worstAsset)}
           </div>
@@ -1051,15 +1051,14 @@ function renderExhibit3(): string {
       It does not predict when an old signature could be forged.
       For AES-128, the nonzero line is only a hypothetical 0.5 scaling exercise, not a measured
       AES decryption probability or a reason to migrate from AES-128 solely for quantum risk.
-      <a href="https://csrc.nist.gov/Projects/post-quantum-cryptography/faqs" target="_blank" rel="noopener">NIST PQC FAQ, AES question (added 18 November 2018; page updated 5 August 2026)</a>
+      <a href="https://csrc.nist.gov/Projects/post-quantum-cryptography/faqs" target="_blank" rel="noopener">NIST PQC FAQ, AES question (added 18 November 2018)</a>
       explains why the idealized Grover query count need not translate to a practical attack.
       <strong>Reading this chart:</strong> the ringed dots sit on the horizons the
-      historical 2024 GRI/evolutionQ expert survey asked about: 10, 15 and 20 years
-      from ${SURVEY_YEAR}, fixed at 2034, 2039 and 2044. The planner as-of year is ${CURRENT_YEAR}.
+      historical 2024 GRI/evolutionQ expert survey asked about. The 10-, 15- and 20-year points fall in 2034, 2039 and 2044. The survey also asked about five and 30 years. This chart omits the five-year point and uses a lab-generated value at 30 years (2054). The planner as-of year is ${CURRENT_YEAR}.
       Published values are <em>averaged</em> probabilities that a CRQC exists by that year,
       not a share of experts — the report averages the experts' likelihood bands two
       ways, giving ~19–34% at 10 years. Ringed dots identify survey horizons;
-      only the pessimistic scenario directly quotes all three published values.
+      solid rings mark published numeric values and dashed rings mark lab estimates. The pessimistic curve uses published values at 10, 15 and 20 years.
       Other scenario values are modelled midpoints or extrapolations. The line between the dots is a smoothed
       <em>interpolation</em>, not a measured forecast — treat the exact percentage
       under the crosshair as an illustration, not a calibrated forecast or individualized
@@ -1202,16 +1201,14 @@ function initExhibit3(): void {
       const points = curve.map(pt => `${xPx(pt.year)},${yPx(pt.probDecryptable)}`).join(' ');
       svgContent += `<polyline points="${points}" fill="none" stroke="${color}" stroke-width="${wCurve}" opacity="0.9"/>`;
 
-      // Survey anchor points: the horizons the expert survey asked about (10/15/20y)
-      // plus the today origin — drawn as hollow ringed dots so a learner sees that
-      // the smooth line is interpolation BETWEEN the anchor horizons, not a forecast.
+      // Ring style identifies the provenance of the displayed scenario value.
       for (const a of exposureAnchors(scenario)) {
         if (!a.surveyed) continue;
         if (a.year < yearStart || a.year > yearStart + horizonYears) continue;
         const ax = xPx(a.year);
         const ay = yPx(a.prob * modifier);
         const rAnchor = compact ? 5.5 : 4;
-        svgContent += `<circle cx="${ax}" cy="${ay}" r="${rAnchor}" fill="${C_PANEL}" stroke="${color}" stroke-width="2"/>`;
+        svgContent += `<circle cx="${ax}" cy="${ay}" r="${rAnchor}" fill="${C_PANEL}" stroke="${color}" stroke-width="2"${a.reportedValue ? '' : ' stroke-dasharray="3 2"'}><title>${a.label}: ${a.reportedValue ? 'published value' : 'lab estimate'}</title></circle>`;
       }
 
       // CRQC arrival year marker
@@ -1242,7 +1239,7 @@ function initExhibit3(): void {
       legendItems.push(`<div class="legend-item"><div class="legend-dot" style="background-color:${C_GHOST}"></div><span>Unscaled hypothetical reference (×${modifier} is illustrative)</span></div>`);
     }
     // Survey-anchor legend note: ringed dots = surveyed horizons, line = interpolation.
-    legendItems.push(`<div class="legend-item"><div class="legend-dot" style="background:${C_PANEL};border:2px solid ${C_LABEL}"></div><span>Ringed dots = 2024 expert-survey horizons · line = smoothed estimate between them</span></div>`);
+    legendItems.push(`<div class="legend-item"><div class="legend-dot" style="background:${C_PANEL};border:2px solid ${C_LABEL}"></div><span>Survey horizons: solid rings = published values, dashed rings = lab estimates. Lines interpolate between points.</span></div>`);
 
     // Axis border
     svgContent += `<rect x="${padL}" y="${padT}" width="${chartW}" height="${chartH}" fill="none" stroke="${C_AXIS}" stroke-width="1"/>`;
@@ -1606,9 +1603,9 @@ function renderExhibit5(): string {
     <div class="tldr-panel">
       <h4>TL;DR — Building New Systems Quantum-Safe From Day&nbsp;1</h4>
       <ul class="tldr-list">
-        <li>Use <strong>ML-KEM-768</strong> for asymmetric/KEM operations (NIST FIPS 203, 2024)</li>
+        <li>For a general-purpose application, <strong>ML-KEM-768</strong> is one key-establishment option in FIPS 203.</li>
         <li>Use <strong>AES-256-GCM</strong> for symmetric encryption (Grover → 128-bit, still safe)</li>
-        <li>Use <strong>ML-DSA-65</strong> or <strong>SLH-DSA</strong> for signatures (NIST FIPS 204/205, 2024)</li>
+        <li>General-purpose signature examples include <strong>ML-DSA-65</strong> and <strong>SLH-DSA</strong> (FIPS 204/205). U.S. national security systems covered by CNSA 2.0 use ML-KEM-1024 and ML-DSA-87. <a href="https://www.nsa.gov/Portals/75/documents/CNSA%20Suite%20documents%2009-2026/CSI_CNSA_2.0_FAQ_.pdf" target="_blank" rel="noopener">NSA suite parameters</a>.</li>
         <li>Design for <strong>crypto-agility</strong>: abstract all crypto behind an interface so algorithms can be swapped</li>
         <li>For long-lived confidentiality, migrate classical RSA key transport and X25519 key agreement. Separately plan migration of RSA, ECDSA and Ed25519 signing for future authenticity.</li>
         <li>For messaging: use Signal's <strong>PQXDH</strong> initial key agreement (<a href="https://signal.org/docs/specifications/pqxdh/" target="_blank" rel="noopener">spec Revision 3, 2023-05-24, last updated 2024-01-23</a>) with the <strong>Triple Ratchet</strong>, which mixes a Sparse Post Quantum Ratchet (SPQR, ML-KEM-768) into the Double Ratchet (<a href="https://signal.org/blog/spqr/" target="_blank" rel="noopener">announced 2 October 2025</a>), or MLS protocol with PQC</li>
@@ -2137,10 +2134,10 @@ function buildApp(): void {
         <ul>
           <li>The Mosca Inequality is a <em>planning</em> framework, not a compliance tool — satisfying it does not guarantee security.</li>
           <li>The HNDL calculators exclude signature-only and hash choices. A signing-key break creates future forgery and verification risk, not retrospective plaintext recovery. <a href="https://csrc.nist.gov/pubs/ir/8547/final" target="_blank" rel="noopener">NIST IR 8547, final report (27 October 2026)</a>, distinguishes these migration use cases.</li>
-          <li>Probability curves interpolate between GRI 2024 anchors (10y / 15y / 20y / 30y) with a smoothstep S-curve. The pessimistic scenario uses the report's published averages at all three surveyed horizons; the other scenarios are modelled midpoints and extrapolations around them.</li>
+          <li>The 2024 survey covered five horizons. The chart omits five years. At 10, 15 and 20 years some scenarios use reported averages. At 30 years every curve uses the lab’s 20-year value plus five percentage points, capped at 99%.</li>
           <li>Quantum-safe algorithms are pinned to 0% exposure regardless of Mosca math.</li>
-          <li>The abstract Grover query bound is 2^64 for AES-128, but this is not a practical AES break. <a href="https://csrc.nist.gov/Projects/post-quantum-cryptography/faqs" target="_blank" rel="noopener">NIST's PQC FAQ (AES question added 18 November 2018; page updated 5 August 2026)</a> says current AES-128/192/256 can continue and practical Grover advantage may be little or none. The AES-128 chart's 0.5 multiplier is an illustrative model choice, not a quantitative forecast or migration directive.</li>
-          <li>Planner as-of year is fixed at <strong>${CURRENT_YEAR}</strong>. Historical survey horizons remain anchored to <strong>${SURVEY_YEAR}</strong> (2034/2039/2044); illustrative arrival offsets are separate model assumptions. Neither date silently follows the system clock.</li>
+          <li>The abstract Grover query bound is 2^64 for AES-128, but this is not a practical AES break. <a href="https://csrc.nist.gov/Projects/post-quantum-cryptography/faqs" target="_blank" rel="noopener">NIST's PQC FAQ (AES question added 18 November 2018)</a> says current AES-128/192/256 can continue and practical Grover advantage may be little or none. The AES-128 chart's 0.5 multiplier is an illustrative model choice, not a quantitative forecast or migration directive.</li>
+          <li>Planner as-of year is fixed at <strong>${CURRENT_YEAR}</strong>. Historical survey horizons remain anchored to <strong>${SURVEY_YEAR}</strong> (2034/2039/2044/2054 on the chart); illustrative arrival offsets are separate model assumptions. Neither date silently follows the system clock.</li>
         </ul>
       </div>
     </div>

@@ -2,7 +2,7 @@
  * Preset organizational scenarios and analysis functions.
  * Uses the Mosca Inequality engine from risk-engine.ts.
  *
- * Migration timeline estimates from NIST/vendor analyses:
+ * Illustrative migration assumptions for this exercise:
  * - Small enterprise: 5-7 years
  * - Medium enterprise: 8-12 years
  * - Large enterprise / government: 12-15+ years
@@ -23,6 +23,7 @@ export interface OrganizationProfile {
   name: string;
   description: string;
   size: 'small' | 'medium' | 'large' | 'government';
+  securityProfile?: 'CNSA 2.0';
   typicalMigrationYears: number;
   assets: Array<{
     name: string;
@@ -101,7 +102,8 @@ export const PRESET_ORGANIZATIONS: OrganizationProfile[] = [
   },
   {
     name: 'Government Intelligence Agency',
-    description: 'Large agency, decade+ migration horizon',
+    description: 'Illustrative U.S. national security system with classified holdings',
+    securityProfile: 'CNSA 2.0',
     size: 'government',
     typicalMigrationYears: 15,
     assets: [
@@ -245,16 +247,21 @@ export function analyzeOrganization(
   if (aggregateRisk.immediateActionRequired) {
     const criticalAssets = priorityOrder.filter((a) => a.riskLevel === 'critical');
     if (criticalAssets.length > 0) {
+      const parameters = profile.securityProfile === 'CNSA 2.0'
+        ? 'This national security system uses the CNSA 2.0 profile: ML-KEM-1024 for key establishment and ML-DSA-87 for signatures.'
+        : 'For a general-purpose deployment, ML-KEM-768 for key establishment and ML-DSA-65 for signatures are examples. Select the parameters required by the application.';
       topRecommendation =
         `EMERGENCY: ${criticalAssets.length} asset(s) at critical risk including` +
-        ` "${criticalAssets[0].name}". Begin PQC migration immediately —` +
-        ' deploy hybrid ML-KEM-768 for key exchange and ML-DSA-65 for signatures.' +
-        ' Use CNSA 2.0 guidance for classified/government data.';
-    } else {
+        ` "${criticalAssets[0].name}". Begin migration planning now. ${parameters}`;
+    } else if (aggregateRisk.exposedDataTB > 0) {
       topRecommendation =
         `URGENT: ${aggregateRisk.percentExposed.toFixed(1)}% of data (${aggregateRisk.exposedDataTB.toFixed(1)} TB)` +
-        ' is exposed under current threat estimates. Prioritize migration of' +
-        ` "${aggregateRisk.worstAsset}" immediately.`;
+        ' crosses the modeled planning boundary. Prioritize assets whose confidentiality lifetime plus migration time exceeds the assumed time to arrival.';
+    } else {
+      const atBoundary = assetAssessments.some(a => a.riskLevel === 'high' && a.moscaInequality.marginYears === 0);
+      topRecommendation = atBoundary
+        ? 'URGENT: At least one asset has no spare planning time. No data volume crosses the strict planning boundary in this scenario.'
+        : 'URGENT: Little planning time remains. No data volume crosses the strict planning boundary in this scenario.';
     }
   } else if (aggregateRisk.percentExposed > 0) {
     topRecommendation =
