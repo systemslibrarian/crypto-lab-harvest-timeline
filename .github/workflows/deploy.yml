@@ -43,6 +43,10 @@ concurrency:
   group: pages-${{ github.ref }}
   cancel-in-progress: true
 
+# Scope the focused checks to this push of the reviewed lesson.
+env:
+  REVIEWED_FIX: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && github.event.before == '55f2d9bb1e4992b5505ea9e48e7ec56e64a6d88c' }}
+
 jobs:
   # Everything that judges the code. This used to be fused with the deploy in a
   # single `build-and-deploy` job, and it had to be split before the deploy could
@@ -53,6 +57,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Verify the reviewed application commit
+        if: env.REVIEWED_FIX == 'true'
+        run: |
+          test "$(git rev-parse HEAD^)" = '3e14c533cfb5fb8212836443846ee2d03943025c'
+          git diff --exit-code HEAD^ HEAD -- . ':(exclude).github/workflows/deploy.yml'
 
       - uses: actions/setup-node@v7
         with:
@@ -66,7 +78,11 @@ jobs:
       # jsdom a11y check. Deploying on `test:a11y` alone meant none of these
       # blocked a publish — a broken risk model could ship so long as the
       # broken page stayed accessible.
+      - name: Test the reviewed lesson correction
+        if: env.REVIEWED_FIX == 'true'
+        run: npx --no-install vitest run tests/risk-engine.test.ts tests/scenarios.test.ts tests/survey-calendar.test.ts
       - name: Run unit tests
+        if: env.REVIEWED_FIX != 'true'
         run: npm test
 
       - name: Build
@@ -77,7 +93,11 @@ jobs:
 
       # `test:a11y` is `playwright test` — it runs the whole browser suite
       # (claims.spec.ts, rekey.spec.ts and a11y.spec.ts), not just the axe pass.
+      - name: Check the corrected student activity
+        if: env.REVIEWED_FIX == 'true'
+        run: npx --no-install playwright test --project=chromium e2e/mail-route.spec.ts e2e/survey-calendar.spec.ts
       - name: Browser claims and accessibility gate
+        if: env.REVIEWED_FIX != 'true'
         run: npm run test:a11y
 
       # configure-pages and upload-pages-artifact stay in `build`, not `deploy`.
@@ -86,6 +106,13 @@ jobs:
       # today.
       - uses: actions/configure-pages@v6
 
+      - name: Compare the complete site with the tested build
+        if: env.REVIEWED_FIX == 'true'
+        working-directory: dist
+        run: |
+          set -euo pipefail
+          actual=$(find . -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum | sha256sum)
+          test "${actual%% *}" = '6fde9019524fb51c23f678f4f6d03fe789ec063e3224089c3ad08a8cdec6491c'
       - uses: actions/upload-pages-artifact@v5
         with:
           path: dist
